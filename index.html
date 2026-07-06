@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="Generative Hours — 60점의 인터랙티브 제너러티브 아트로 구성된 미디어 아트 전시." />
+  <title>Generative Hours · 제너러티브 아트 전시</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./css/style.css" />
+  <!-- three.js (XI관 — 시간을 세는 법). 빌드 없는 사이트라 bare specifier를
+       해결할 import map이 필요. addon들이 `from 'three'`를 쓰므로 필수.
+       카메라관의 MediaPipe와 같은 zero-build CDN-ESM 경로. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body data-view="atrium">
+  <!-- ===== Grain / vignette overlay (whole-page atmosphere) ================= -->
+  <div class="grain" aria-hidden="true"></div>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <!-- ===== Top bar ========================================================= -->
+  <header class="topbar">
+    <button class="brand" data-action="home" aria-label="아트리움으로">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">GENERATIVE&nbsp;HOURS</span>
+    </button>
+    <nav class="topnav" aria-label="전시관">
+      <!-- wing links injected by JS -->
+    </nav>
+    <button class="sound-toggle" data-action="sound" aria-pressed="false" aria-label="사운드 토글">
+      <span class="sound-toggle__icon" aria-hidden="true"></span>
+    </button>
+  </header>
+
+  <!-- ===== ATRIUM (landing) ================================================ -->
+  <main class="atrium" id="atrium">
+    <section class="hero">
+      <p class="hero__eyebrow">제너러티브 · 인터랙티브 미디어 아트 전시</p>
+      <h1 class="hero__title">Generative<br />Hours</h1>
+      <p class="hero__lead">
+        코드로 자라나는 쉰 개의 풍경. 흐름과 생명, 빛과 형태, 노이즈와 시공간,
+        거울과 글자, 작은 것들의 모험, 다시 그린 명화, 시간을 세는 법, 그리고 시간의
+        스펙터클 — 열세 개의 전시관을 거닐며 작품을 직접 만지고, 휘젓고, 키워보세요.
+        모든 화면은 매 순간 단 한 번만 존재하는, 다시 그려지지 않을 그림입니다.
+      </p>
+      <div class="hero__meta">
+        <span>60 WORKS</span><i></i><span>13 WINGS</span><i></i><span>INTERACTIVE</span>
+      </div>
+      <button class="hero__enter" data-action="enter">전시 입장 <span aria-hidden="true">↓</span></button>
+    </section>
+    <div class="hero__scrollhint" aria-hidden="true"></div>
+  </main>
+
+  <!-- ===== GALLERY (work grid) ============================================= -->
+  <section class="gallery" id="gallery" aria-label="작품 목록">
+    <!-- wings + work cards injected by JS -->
+  </section>
+
+  <!-- ===== EXHIBIT ROOM (single work, fullscreen) ========================= -->
+  <section class="room" id="room" aria-hidden="true" aria-label="전시실">
+    <canvas class="room__canvas" id="stage"></canvas>
+
+    <!-- loading shimmer -->
+    <div class="room__loader" id="loader" aria-hidden="true"><span></span><span></span><span></span></div>
+
+    <!-- placard / wall text -->
+    <aside class="placard" id="placard">
+      <button class="placard__collapse" data-action="placard-toggle" aria-label="작품 설명 접기">
+        <span aria-hidden="true"></span>
+      </button>
+      <p class="placard__no"></p>
+      <h2 class="placard__title"></h2>
+      <p class="placard__ko"></p>
+      <p class="placard__medium"></p>
+      <div class="placard__rule"></div>
+      <p class="placard__note"></p>
+
+      <button class="placard__more" data-action="details-toggle" aria-expanded="false" aria-controls="details">
+        <span class="placard__more-label">기술 노트 자세히 보기</span>
+        <span class="placard__more-icon" aria-hidden="true"></span>
+      </button>
+      <div class="details" id="details" hidden>
+        <div class="details__block">
+          <p class="details__label">기법 · TECHNIQUE</p>
+          <p class="details__text" data-detail="tech"></p>
+        </div>
+        <div class="details__block">
+          <p class="details__label">개념 · CONCEPT</p>
+          <p class="details__text" data-detail="idea"></p>
+        </div>
+        <div class="details__block">
+          <p class="details__label">체험 · TRY THIS</p>
+          <p class="details__text" data-detail="play"></p>
+        </div>
+      </div>
+
+      <div class="placard__controls" id="controls"><!-- per-piece controls --></div>
+    </aside>
+
+    <!-- bottom action bar -->
+    <div class="actionbar">
+      <button class="actionbar__btn" data-action="prev" aria-label="이전 작품">‹</button>
+      <div class="actionbar__center">
+        <p class="actionbar__hint" id="hint"></p>
+      </div>
+      <button class="actionbar__btn" data-action="next" aria-label="다음 작품">›</button>
+    </div>
+
+    <button class="room__exit" data-action="exit" aria-label="전시실 나가기 (Esc)">✕ 나가기</button>
+  </section>
+
+  <!-- ===== Footer credit ================================================== -->
+  <footer class="credit" id="credit">
+    <p>Generative Hours · 코드로 그린 전시 · <span id="year"></span></p>
+  </footer>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
