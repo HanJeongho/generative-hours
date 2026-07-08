@@ -284,7 +284,8 @@ body[data-view="room"] .topbar { background: transparent; }
 
 /* ---- Placard --------------------------------------------------------------*/
 .placard {
-  position: absolute; top: 50%; left: clamp(20px, 4vw, 52px);
+  --placard-left: clamp(20px, 4vw, 52px);
+  position: absolute; top: 50%; left: var(--placard-left);
   transform: translateY(-50%);
   width: min(360px, 80vw); z-index: 10;
   background: rgba(12,12,15,0.66);
@@ -302,7 +303,9 @@ body[data-view="room"] .topbar { background: transparent; }
 /* collapse leaves the little tab (right: -38px, 30px wide) on-screen so it can
    be clicked to re-open — slide just far enough that the tab's left edge sits at
    the viewport edge, not the whole panel + extra (which pushed the tab off too). */
-.placard.is-collapsed { transform: translateY(-50%) translateX(calc(-100% - 8px)); }
+/* collapsed: panel's right edge lands exactly at x=0 — the panel is fully
+   off-screen and ONLY the 34px arrow tab remains visible at the edge */
+.placard.is-collapsed { transform: translateY(-50%) translateX(calc(-100% - var(--placard-left))); }
 .placard__collapse {
   position: absolute; top: 50%; right: -34px; transform: translateY(-50%);
   width: 34px; height: 76px; border-radius: 0 8px 8px 0;
