@@ -1,5 +1,16 @@
+# OS / editor cruft
 .DS_Store
-*.log
 *.swp
+*~
 .idea/
 .vscode/
+
+# local scratch
+_probe.html
+_dprobe.html
+*.log
+
+# making-of: heavy share-only GIF (slides use the lighter mp4 loop instead)
+guide/img/chargering.gif
+# making-of: source video workspace (extracted clips live in guide/video/)
+guide/video-src/

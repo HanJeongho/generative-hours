@@ -291,18 +291,27 @@ body[data-view="room"] .topbar { background: transparent; }
   backdrop-filter: blur(18px) saturate(1.2);
   border: 1px solid var(--line); border-radius: 6px;
   padding: 30px 28px; transition: transform 0.6s var(--ease), opacity 0.6s;
-  max-height: 78vh; overflow-y: auto; scrollbar-width: thin;
+  max-height: 78vh;
+}
+/* scrolling lives on an inner wrapper so the collapse tab (outside the box)
+   is never clipped — it stays visible in BOTH open and collapsed states */
+.placard__scroll {
+  max-height: calc(78vh - 60px); overflow-y: auto; scrollbar-width: thin;
+  margin-right: -10px; padding-right: 10px;
 }
 /* collapse leaves the little tab (right: -38px, 30px wide) on-screen so it can
    be clicked to re-open — slide just far enough that the tab's left edge sits at
    the viewport edge, not the whole panel + extra (which pushed the tab off too). */
 .placard.is-collapsed { transform: translateY(-50%) translateX(calc(-100% - 8px)); }
 .placard__collapse {
-  position: absolute; top: 50%; right: -38px; transform: translateY(-50%);
-  width: 30px; height: 56px; border-radius: 0 6px 6px 0;
-  background: rgba(12,12,15,0.66); border: 1px solid var(--line); border-left: none;
+  position: absolute; top: 50%; right: -34px; transform: translateY(-50%);
+  width: 34px; height: 76px; border-radius: 0 8px 8px 0;
+  background: rgba(12,12,15,0.78); border: 1px solid var(--line); border-left: none;
   backdrop-filter: blur(18px); display: grid; place-items: center;
+  cursor: pointer; transition: background 0.25s, border-color 0.25s;
 }
+.placard__collapse:hover { background: rgba(24,24,30,0.9); border-color: var(--accent); }
+.placard__collapse:hover span { border-color: var(--accent); }
 .placard__collapse span {
   width: 7px; height: 7px; border-right: 1.5px solid var(--ink-dim);
   border-bottom: 1.5px solid var(--ink-dim); transform: rotate(135deg);
