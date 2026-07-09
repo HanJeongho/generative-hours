@@ -7,8 +7,8 @@ Live: https://d3acb4zouf8s0e.cloudfront.net/ · https://hanjeongho.github.io/gen
 
 | | |
 |---|---|
-| ![01 · Currents — Perlin 벡터장을 따라 흐르는 수만 개의 입자](docs/shots/01-currents.jpg) **01 · Currents** — Perlin 벡터장의 흐름 | ![37 · The Great Wave — 호쿠사이 원작의 페이퍼 시어터](docs/shots/37-great-wave.jpg) **37 · The Great Wave** — 페이퍼 시어터 |
-| ![27 · Precognition — 양손 제스처로 조작하는 홀로그램 UI](docs/shots/27-precognition.jpg) **27 · Precognition** — 손 추적 홀로그램 | |
+| ![01 · Currents](docs/shots/01-currents.jpg) **01 · Currents** — Perlin 벡터장의 흐름 | ![37 · The Great Wave](docs/shots/37-great-wave.jpg) **37 · The Great Wave** — 호쿠사이 페이퍼 시어터 |
+| ![45 · Sand Mandala](docs/shots/45-mandala.jpg) **45 · Sand Mandala** — 매시간 완성되고 지워지는 모래 시계 | ![47 · Nixie](docs/shots/47-nixie.jpg) **47 · Nixie** — 3D 닉시관 시계 |
 
 ## 실행 (Run)
 
@@ -37,6 +37,3 @@ python3 serve.py        # → http://localhost:8777
 
 MIT — [LICENSE](LICENSE) 참조.
 
-## 크레딧
-
-원작 이미지(37 가나가와 파도, 39 절규)는 퍼블릭 도메인.
