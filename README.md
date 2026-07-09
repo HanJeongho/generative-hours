@@ -28,6 +28,10 @@ python3 serve.py        # → http://localhost:8777
 외부 의존성은 CDN(ES modules)으로만 로드: three.js, MediaPipe Tasks Vision.
 캔버스 기법: Canvas2D, raw WebGL(GLSL), three.js — 작품별 최적 선택.
 
+## 라이선스
+
+MIT — [LICENSE](LICENSE) 참조.
+
 ## 크레딧
 
 원작 이미지(37 가나가와 파도, 39 절규)는 퍼블릭 도메인.
