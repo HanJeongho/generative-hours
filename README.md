@@ -3,7 +3,12 @@
 **63점의 인터랙티브 제너러티브 아트로 구성된 미디어 아트 전시 웹사이트.**
 An interactive generative-art exhibition — 63 works across 13 wings, all running live in the browser.
 
-Live: https://d3acb4zouf8s0e.cloudfront.net/
+Live: https://d3acb4zouf8s0e.cloudfront.net/ · https://hanjeongho.github.io/generative-hours/
+
+| | |
+|---|---|
+| ![01 · Currents — Perlin 벡터장을 따라 흐르는 수만 개의 입자](docs/shots/01-currents.jpg) **01 · Currents** — Perlin 벡터장의 흐름 | ![37 · The Great Wave — 호쿠사이 원작의 페이퍼 시어터](docs/shots/37-great-wave.jpg) **37 · The Great Wave** — 페이퍼 시어터 |
+| ![27 · Precognition — 양손 제스처로 조작하는 홀로그램 UI](docs/shots/27-precognition.jpg) **27 · Precognition** — 손 추적 홀로그램 | |
 
 ## 실행 (Run)
 
