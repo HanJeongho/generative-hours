@@ -1,5 +1,20 @@
+# OS / editor cruft
 .DS_Store
 *.log
 *.swp
 .idea/
 .vscode/
+
+# ---- safety net: must NEVER be committed ----
+CLAUDE.md
+MAKING-OF.md
+making-of.html
+guide/
+.env
+.env.*
+*.pem
+*.key
+*token*
+*credential*
+*secret*
+.aws/
