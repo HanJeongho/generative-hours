@@ -142,6 +142,9 @@ button { font-family: inherit; color: inherit; cursor: pointer; background: none
   animation: rise 1.2s var(--ease) both 0.5s;
 }
 .hero__meta i { width: 4px; height: 4px; border-radius: 50%; background: var(--ink-ghost); }
+.hero__sister { margin-top: 26px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.06em; }
+.hero__sister a { color: var(--ink-dim); text-decoration: none; border-bottom: 1px solid var(--line); padding-bottom: 2px; transition: color 0.25s, border-color 0.25s; }
+.hero__sister a:hover { color: var(--accent); border-color: var(--accent); }
 .hero__enter {
   font-family: var(--mono); font-size: 13px; letter-spacing: 0.2em;
   color: var(--ink); border: 1px solid var(--line);

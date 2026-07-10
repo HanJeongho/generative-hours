@@ -5,7 +5,8 @@
 //  drives placard text, controls, navigation, sound, and thumbnails.
 // ============================================================================
 
-import { WINGS, WORKS, wingOf } from "./data.js";
+// the shell is reused by sister exhibitions: <html data-catalog="./data-errors.js">
+const { WINGS, WORKS, wingOf } = await import(document.documentElement.dataset.catalog || "./data.js");
 import { DETAILS } from "./details.js";
 
 const body = document.body;
@@ -1181,6 +1182,42 @@ const thumbPainters = {
     ctx.strokeStyle = a; ctx.lineWidth = 1.5; ctx.setLineDash([4, 5]);
     ctx.beginPath(); ctx.moveTo(0, rowH * 2 - mth / 2); ctx.lineTo(W, rowH * 2 - mth / 2); ctx.stroke();
     ctx.setLineDash([]);
+  },
+  "67"(ctx, W, H, a) {                       // gnomon — plaza + shadow hand
+    ctx.fillStyle = "#8f8878"; ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H * 0.52, R = Math.min(W, H) * 0.42;
+    const d = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+    d.addColorStop(0, "#a89f8c"); d.addColorStop(1, "#7d7666");
+    ctx.fillStyle = d; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    for (let h = 0; h < 24; h++) {
+      const an = (h / 24) * Math.PI * 2;
+      ctx.strokeStyle = "rgba(30,26,22,0.5)"; ctx.lineWidth = h % 6 === 0 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(an) * R * 0.86, cy + Math.sin(an) * R * 0.86);
+      ctx.lineTo(cx + Math.cos(an) * R * 0.94, cy + Math.sin(an) * R * 0.94);
+      ctx.stroke();
+    }
+    const sh = ctx.createLinearGradient(cx, cy, cx - R * 0.6, cy + R * 0.35);
+    sh.addColorStop(0, "rgba(16,14,18,0.75)"); sh.addColorStop(1, "rgba(16,14,18,0)");
+    ctx.strokeStyle = sh; ctx.lineWidth = 7; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - R * 0.6, cy + R * 0.35); ctx.stroke();
+    ctx.fillStyle = "#3c332a"; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#d6b278"; ctx.beginPath(); ctx.arc(cx, cy, 3.5, 0, Math.PI * 2); ctx.fill();
+  },
+  "68"(ctx, W, H, a) {                       // tides — earth, double bulge, moon
+    ctx.fillStyle = "#04060c"; ctx.fillRect(0, 0, W, H);
+    const cx = W * 0.42, cy = H * 0.55, eR = Math.min(W, H) * 0.20;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(-0.5);
+    ctx.fillStyle = "rgba(38,96,156,0.9)";
+    ctx.beginPath(); ctx.ellipse(0, 0, eR * 1.45, eR * 1.05, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    const eg = ctx.createRadialGradient(cx - eR * 0.3, cy - eR * 0.3, 0, cx, cy, eR);
+    eg.addColorStop(0, "#7fb08a"); eg.addColorStop(1, "#1d3c50");
+    ctx.fillStyle = eg; ctx.beginPath(); ctx.arc(cx, cy, eR, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#dfe4ee";
+    ctx.beginPath(); ctx.arc(cx + eR * 2.6 * Math.cos(-0.5), cy + eR * 2.6 * Math.sin(-0.5), eR * 0.24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#ffd27c";
+    ctx.beginPath(); ctx.arc(cx + eR * Math.cos(0.9), cy + eR * Math.sin(0.9), 4, 0, Math.PI * 2); ctx.fill();
   },
   "51"(ctx, W, H, a) {                       // (vault) helios — boiling star, corona, prominence
     ctx.fillStyle = "#030204"; ctx.fillRect(0, 0, W, H);
