@@ -1219,6 +1219,248 @@ const thumbPainters = {
     ctx.fillStyle = "#ffd27c";
     ctx.beginPath(); ctx.arc(cx + eR * Math.cos(0.9), cy + eR * Math.sin(0.9), 4, 0, Math.PI * 2); ctx.fill();
   },
+  "69"(ctx, W, H, a) {                       // worn step — grey stone, worn hollow
+    ctx.fillStyle = "#111013"; ctx.fillRect(0, 0, W, H);
+    const x0 = W * 0.14, y0 = H * 0.16, sw = W * 0.72, sh = H * 0.68;
+    ctx.fillStyle = "#5c5954"; ctx.fillRect(x0, y0, sw, sh);
+    let s = 777; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 900; i++) {
+      const x = x0 + rnd() * sw, y = y0 + rnd() * sh;
+      ctx.fillStyle = rnd() < 0.5 ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.07)";
+      ctx.fillRect(x, y, 1.4, 1.4);
+    }
+    const cx = x0 + sw * 0.5, cy = y0 + sh * 0.55;
+    const hollow = ctx.createRadialGradient(cx, cy, 0, cx, cy, sw * 0.3);
+    hollow.addColorStop(0, "rgba(212,178,120,0.5)");
+    hollow.addColorStop(0.55, "rgba(80,74,66,0.55)");
+    hollow.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = hollow;
+    ctx.beginPath(); ctx.ellipse(cx, cy, sw * 0.3, sh * 0.3, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(255,244,220,0.25)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx - sw * 0.05, cy - sh * 0.06, sw * 0.16, sh * 0.12, -0.4, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = "rgba(20,18,16,0.8)"; ctx.lineWidth = 3;
+    ctx.strokeRect(x0, y0, sw, sh);
+  },
+  "70"(ctx, W, H, a) {
+    ctx.fillStyle = "#0b0a0d"; ctx.fillRect(0, 0, W, H);
+    const cs = [[W * 0.24, H * 0.44, 0.30, 0.16], [W * 0.5, H * 0.5, 0.92, 0.62], [W * 0.76, H * 0.45, 0.26, 0.12]];
+    let s = 1234567; const rnd = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 3; i++) {
+      const [cx, cy, glow, wear] = cs[i];
+      const R = W * (i === 1 ? 0.16 : 0.11);
+      const hue = 40 - (i === 1 ? 15 : 4) * wear;
+      const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * 2.4);
+      gr.addColorStop(0, `hsla(${hue | 0},70%,60%,${(0.05 + glow * 0.13).toFixed(3)})`);
+      gr.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = 1; ctx.fillStyle = gr;
+      ctx.fillRect(cx - R * 2.4, cy - R * 2.4, R * 4.8, R * 4.8);
+      ctx.fillStyle = `hsl(${hue | 0},${(52 + wear * 24) | 0}%,${(60 + glow * 12) | 0}%)`;
+      for (let k = 0; k < 360; k++) {
+        const ang = rnd() * 6.283, rr = Math.pow(rnd(), 0.5) * R;
+        const jx = (rnd() * 2 - 1) * R * wear * 0.95, jy = (rnd() * 2 - 1) * R * wear * 0.95;
+        ctx.globalAlpha = 0.12 + glow * 0.7;
+        ctx.fillRect(cx + Math.cos(ang) * rr + jx, cy + Math.sin(ang) * rr * 1.35 + jy, 1.6, 1.6);
+      }
+    }
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  },
+  "71"(ctx, W, H, a) {                       // downstream — a warm light on a night river
+    const horizon = H * 0.30;
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#0a0d14"); bg.addColorStop(horizon / H, "#0c1119"); bg.addColorStop(1, "#050609");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const cx = (d) => W * 0.5 + Math.sin(d * 3.1 + 0.6) * W * 0.17 * (1 - d * 0.72);
+    const yOf = (d) => horizon + (1 - d) * (H * 1.02 - horizon);
+    const hwOf = (d) => (0.46 - 0.44 * Math.pow(d, 0.82)) * W;
+    ctx.globalCompositeOperation = "lighter";
+    // cool water sparkle following the meandering channel
+    ctx.fillStyle = "#bcd2f2";
+    for (let i = 0; i < 520; i++) {
+      const d = Math.pow(Math.random(), 0.7);
+      const x = cx(d) + (Math.random() - 0.5) * 2 * hwOf(d);
+      ctx.globalAlpha = (0.06 + 0.3 * Math.random()) * (1 - d * 0.7);
+      const s = 1.8 - 1.1 * d; ctx.fillRect(x, yOf(d), s, s);
+    }
+    const glow = (x, y, r, warm, alpha) => {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, warm ? "rgba(255,246,224,1)" : "rgba(255,210,140,0.9)");
+      g.addColorStop(0.35, "rgba(255,190,110,0.35)");
+      g.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = alpha; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    };
+    // horizon cluster — the moments already sent
+    for (let i = 0; i < 22; i++) {
+      const d = 0.9 + Math.random() * 0.09;
+      const x = cx(d) + (Math.random() - 0.5) * 2 * hwOf(d);
+      glow(x, yOf(d) + Math.random() * 4, 5 + Math.random() * 5, false, 0.5 + Math.random() * 0.4);
+    }
+    // the held light near the viewer, with a stretched wavy reflection
+    const lx = cx(0.06), ly = H * 0.80;
+    for (let i = 1; i <= 8; i++) {
+      const f = i / 8;
+      glow(lx + Math.sin(f * 7) * 10 * f, ly + 12 + f * 70, 10 * (1 - 0.6 * f), true, 0.28 * (1 - f));
+    }
+    glow(lx, ly, 46, false, 0.85);
+    glow(lx, ly, 18, true, 1);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = "source-over";
+  },
+  "72"(ctx, W, H, a) {                       // alight — the now, landed on an open hand: full bloom
+    ctx.fillStyle = "#0b0d12"; ctx.fillRect(0, 0, W, H);
+    const cx = W * 0.55, cy = H * 0.45;
+    ctx.globalCompositeOperation = "lighter";
+    // screen-filling warm bloom (만개)
+    let bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(W, H) * 0.95);
+    bg.addColorStop(0, "rgba(255,208,146,0.82)");
+    bg.addColorStop(0.26, "rgba(255,168,86,0.32)");
+    bg.addColorStop(0.62, "rgba(150,90,50,0.08)");
+    bg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    // radiating petals of the blossom
+    const NR = 44, R = Math.min(W, H) * 0.52;
+    for (let i = 0; i < NR; i++) {
+      const ang = (i / NR) * Math.PI * 2;
+      const len = R * (0.42 + 0.58 * Math.abs(Math.sin(i * 2.399)));
+      const ex = cx + Math.cos(ang) * len, ey = cy + Math.sin(ang) * len;
+      const gr = ctx.createLinearGradient(cx, cy, ex, ey);
+      gr.addColorStop(0, "rgba(255,224,166,0.5)");
+      gr.addColorStop(1, "rgba(255,150,70,0)");
+      ctx.strokeStyle = gr; ctx.lineWidth = 2 + (i % 2);
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(ex, ey); ctx.stroke();
+    }
+    // the chase-then-arrival wisp (its flight path curving in)
+    const wg = ctx.createLinearGradient(W * 0.14, H * 0.86, cx, cy);
+    wg.addColorStop(0, "rgba(150,176,210,0)");
+    wg.addColorStop(0.6, "rgba(210,196,168,0.16)");
+    wg.addColorStop(1, "rgba(255,214,158,0.4)");
+    ctx.strokeStyle = wg; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.moveTo(W * 0.14, H * 0.86);
+    ctx.quadraticCurveTo(W * 0.2, H * 0.42, cx, cy); ctx.stroke();
+    // faint dust motes (material atmosphere)
+    for (let i = 0; i < 46; i++) {
+      const x = ((i * 97.13) % 1) * 0 + (Math.sin(i * 12.9898) * 43758.5453 % 1) * W;
+      const y = (Math.sin(i * 78.233) * 43758.5453 % 1) * H;
+      ctx.fillStyle = "rgba(255,206,150,0.22)";
+      ctx.fillRect((x + W) % W, (y + H) % H, 1.4, 1.4);
+    }
+    // the grain = now, alight
+    const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * 0.09);
+    cg.addColorStop(0, "rgba(255,251,240,1)");
+    cg.addColorStop(0.35, "rgba(255,224,164,0.72)");
+    cg.addColorStop(1, "rgba(255,200,120,0)");
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx, cy, Math.min(W, H) * 0.09, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,253,246,1)"; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+    // vignette
+    const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.55)");
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  },
+"73"(ctx, W, H, a) {
+    ctx.fillStyle = "#0b0c10"; ctx.fillRect(0, 0, W, H);
+    const ax = W * 0.26, ay = H * 0.46, bx = W * 0.76, by = H * 0.54;
+    const bg = ctx.createRadialGradient(ax, ay, 0, ax, ay, W * 0.6);
+    bg.addColorStop(0, "rgba(40,52,84,0.16)"); bg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 60; i++) {                       // 기다림 성운
+      const r = Math.sqrt(Math.random()) * H * 0.22, an = Math.random() * 6.283;
+      const x = ax + Math.cos(an) * r, y = ay + Math.sin(an) * r * 0.55 - i * 0.4;
+      const rr = 12 + Math.random() * 12;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
+      g.addColorStop(0, "rgba(168,186,224,0.30)"); g.addColorStop(1, "rgba(120,140,190,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
+    }
+    ctx.restore();
+    const gr = ctx.createLinearGradient(ax, ay, bx, by);  // 빛의 실 = 약속
+    gr.addColorStop(0, "rgba(150,180,235,0.85)"); gr.addColorStop(1, "rgba(255,190,140,0.85)");
+    ctx.strokeStyle = gr; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    const glow = (x, y, rr, c) => {
+      ctx.save(); ctx.globalCompositeOperation = "lighter";
+      const g = ctx.createRadialGradient(x, y, 0, x, y, rr);
+      g.addColorStop(0, c); g.addColorStop(1, c.replace(/[\d.]+\)$/, "0)"));
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill(); ctx.restore();
+    };
+    glow(ax, ay, 22, "rgba(168,190,235,0.6)");           // 기다림 끝
+    glow(bx, by, 16, "rgba(255,190,140,0.7)");           // 늦음 끝
+    const q = 0.34;                                       // 건너오는 상대 + 스트릭
+    const rx = bx + (ax - bx) * q, ry = by + (ay - by) * q - H * 0.14 * Math.sin(q * 3.14);
+    ctx.strokeStyle = "rgba(210,224,255,0.4)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(rx + 26, ry + 8); ctx.lineTo(rx, ry); ctx.stroke();
+    glow(rx, ry, 11, "rgba(220,232,255,0.9)");
+    ctx.fillStyle = "rgba(210,220,240,0.7)";
+    ctx.font = "600 13px ui-monospace, monospace"; ctx.textAlign = "right";
+    ctx.fillText("05:00", W - 12, 20);
+  },
+  "74"(ctx, W, H, a) {                       // one more time — iridescent bubbles rising at dusk
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#06080f"); sky.addColorStop(0.55, "#0a0f20"); sky.addColorStop(1, "#12182e");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const dusk = ctx.createRadialGradient(W * 0.5, H * 1.1, 0, W * 0.5, H * 1.1, H * 0.9);
+    dusk.addColorStop(0, "rgba(150,86,96,0.18)"); dusk.addColorStop(1, "rgba(150,86,96,0)");
+    ctx.fillStyle = dusk; ctx.fillRect(0, 0, W, H);
+    const bubbles = [[W * 0.30, H * 0.70, 22], [W * 0.46, H * 0.52, 15], [W * 0.63, H * 0.62, 27], [W * 0.55, H * 0.36, 12], [W * 0.73, H * 0.42, 18], [W * 0.38, H * 0.46, 9]];
+    const stops = ["rgba(90,225,220,0.6)", "rgba(232,120,222,0.6)", "rgba(242,208,120,0.6)", "rgba(120,182,242,0.6)"];
+    for (const [x, y, r] of bubbles) {
+      ctx.globalCompositeOperation = "lighter";
+      const hg = ctx.createRadialGradient(x, y, r * 0.3, x, y, r * 2);
+      hg.addColorStop(0, "rgba(150,200,235,0.13)"); hg.addColorStop(1, "rgba(150,200,235,0)");
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(x, y, r * 2, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = "source-over";
+      ctx.fillStyle = "rgba(205,222,255,0.10)"; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = Math.max(1.4, r * 0.14);
+      for (let s = 0; s < 4; s++) { ctx.strokeStyle = stops[s]; ctx.beginPath(); ctx.arc(x, y, r - 1, s / 4 * Math.PI * 2, (s + 1) / 4 * Math.PI * 2); ctx.stroke(); }
+      ctx.fillStyle = "rgba(255,255,255,0.9)"; ctx.beginPath(); ctx.arc(x - r * 0.34, y - r * 0.38, Math.max(1, r * 0.13), 0, Math.PI * 2); ctx.fill();
+    }
+    // the just-popped bubble — the ordinary last one — scattering into fine droplets
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 16; i++) { const an = i / 16 * Math.PI * 2, rr = 8 + Math.random() * 22; ctx.fillStyle = "rgba(200,228,248,0.7)"; ctx.beginPath(); ctx.arc(W * 0.5 + Math.cos(an) * rr, H * 0.2 + Math.sin(an) * rr * 0.8, 1.4, 0, Math.PI * 2); ctx.fill(); }
+    ctx.globalCompositeOperation = "source-over";
+  },
+  "75"(ctx, W, H, a) {                       // stray light — sunbeams through cloud gaps into deep space
+    // deep space sky
+    const bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#05060d"); bg.addColorStop(0.55, "#0b0b18"); bg.addColorStop(1, "#050509");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    const hY = H * 0.70;
+    // stars
+    for (let i = 0; i < 80; i++) {
+      const x = Math.random() * W, y = Math.random() * hY;
+      const r = Math.random() < 0.85 ? 0.6 : 1.3;
+      ctx.fillStyle = `rgba(200,215,255,${0.3 + Math.random() * 0.6})`;
+      ctx.fillRect(x, y, r, r);
+    }
+    // dark field
+    ctx.fillStyle = "#08080c"; ctx.fillRect(0, hY, W, H - hY);
+    // beams through three gaps
+    const gaps = [0.30, 0.52, 0.74], spread = W * 0.10;
+    ctx.globalCompositeOperation = "lighter";
+    for (const gx of gaps) {
+      const topX = gx * W, topY = H * 0.05, botY = hY + H * 0.06;
+      // spectral fringe (blue + red offset) then warm core
+      for (const [dx, col] of [[-4, "rgba(90,120,255,"], [4, "rgba(255,90,70,"], [0, "rgba(255,210,124,"]]) {
+        const g = ctx.createLinearGradient(topX, topY, topX, botY);
+        g.addColorStop(0, col + "0.55)"); g.addColorStop(0.5, col + "0.16)"); g.addColorStop(1, col + "0)");
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(topX - W * 0.02 + dx, topY); ctx.lineTo(topX + W * 0.02 + dx, topY);
+        ctx.lineTo(topX + spread + dx, botY); ctx.lineTo(topX - spread + dx, botY);
+        ctx.closePath(); ctx.fill();
+      }
+      // burst at the gap
+      const b = ctx.createRadialGradient(topX, topY + 6, 0, topX, topY + 6, W * 0.06);
+      b.addColorStop(0, "rgba(255,225,160,0.9)"); b.addColorStop(1, "rgba(255,210,124,0)");
+      ctx.fillStyle = b; ctx.fillRect(topX - W * 0.1, topY - 10, W * 0.2, H * 0.2);
+      // ground pool (flattened glow)
+      const p = ctx.createRadialGradient(0, 0, 0, 0, 0, spread * 1.2);
+      p.addColorStop(0, "rgba(255,205,130,0.55)"); p.addColorStop(1, "rgba(255,205,130,0)");
+      ctx.save(); ctx.translate(topX, hY + 6); ctx.scale(1, 0.4);
+      ctx.fillStyle = p; ctx.beginPath(); ctx.arc(0, 0, spread * 1.2, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  },
   "51"(ctx, W, H, a) {                       // (vault) helios — boiling star, corona, prominence
     ctx.fillStyle = "#030204"; ctx.fillRect(0, 0, W, H);
     const cx = W * 0.5, cy = H * 0.52, R = Math.min(W, H) * 0.30;
