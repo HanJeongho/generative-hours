@@ -20,11 +20,11 @@ const CHAINS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [5, 9], [9, 10, 11, 12], [9, 1
 const SEG = [];
 for (const ch of CHAINS) for (let k = 1; k < ch.length; k++) SEG.push([ch[k - 1], ch[k]]);
 const NSEG = SEG.length;            // 20 뼈마디
-const SNOW_MAX = 26;                // 세그먼트당 최대 적설(px)
+const SNOW_MAX = 34;                // 세그먼트당 최대 적설(px)
 const SHAKE = 820;                  // 눈털기 속도 문턱(px/s)
 const NF = 72;                      // 바닥 눈 언덕 컬럼 수
 
-const MAXFLK = 320, MAXCRY = 8, MAXDROP = 260, MAXSPK = 120;
+const MAXFLK = 1100, MAXCRY = 20, MAXDROP = 520, MAXSPK = 260;
 
 export default class SnowHands extends VisionPiece {
   get tracker() { return "hand"; }
@@ -113,15 +113,15 @@ export default class SnowHands extends VisionPiece {
   }
 
   _pop(x, y) {
-    // 손바닥에 특별 결정을 받았을 때 — 반짝 팡
+    // 손바닥에 특별 결정을 받았을 때 — 반짝 팡 (큼직하게 부서짐)
     let n = 0;
     for (const s of this.spk) {
-      if (s.on || n >= 16) continue;
+      if (s.on || n >= 30) continue;
       n++; s.on = true;
-      const a = rand(0, TAU), sp = rand(60, 220);
-      s.x = x + rand(-4, 4); s.y = y + rand(-4, 4);
+      const a = rand(0, TAU), sp = rand(60, 280);
+      s.x = x + rand(-5, 5); s.y = y + rand(-5, 5);
       s.vx = Math.cos(a) * sp; s.vy = Math.sin(a) * sp;
-      s.life = rand(0.35, 0.7);
+      s.life = rand(0.35, 0.85);
     }
   }
 
@@ -159,8 +159,8 @@ export default class SnowHands extends VisionPiece {
     }
     this._drawFloor(g, W, H, colW);
 
-    // ---- 특별 육각 결정: 크고 느리게, 손바닥으로 받으면 팡 --------------------
-    this._cryAcc += dt * 0.22 * this.snowAmt;
+    // ---- 특별 육각 결정: 크고 느리게, 손바닥으로 받으면 팡 (자주, 여럿) --------
+    this._cryAcc += dt * 0.85 * this.snowAmt;
     while (this._cryAcc >= 1) {
       this._cryAcc -= 1;
       const c = this.cry.find((q) => !q.on);
@@ -184,8 +184,8 @@ export default class SnowHands extends VisionPiece {
       this._drawCrystal(g, c);
     }
 
-    // ---- 눈송이: 스폰 · 낙하 · 손에 쌓임 · 바닥 퇴적 --------------------------
-    this._flkAcc += dt * 200 * this.snowAmt;
+    // ---- 눈송이: 스폰 · 낙하 · 손에 쌓임 · 바닥 퇴적 (기본 강설 3.5배) --------
+    this._flkAcc += dt * 700 * this.snowAmt;
     while (this._flkAcc >= 1) { this._flkAcc -= 1; this._spawnFlake(W); }
     g.fillStyle = "#ffffff";
     for (const f of this.flakes) {
@@ -205,11 +205,11 @@ export default class SnowHands extends VisionPiece {
             for (let i = 0; i < NSEG; i++) {
               const a = h.pts[SEG[i][0]], b = h.pts[SEG[i][1]];
               const cr = 7 + h.snow[i] * 0.45;
-              if (this._seg(f.x, f.y, a.x, a.y, b.x, b.y) < cr) { h.snow[i] = Math.min(SNOW_MAX, h.snow[i] + 3.2); landed = true; break; }
+              if (this._seg(f.x, f.y, a.x, a.y, b.x, b.y) < cr) { h.snow[i] = Math.min(SNOW_MAX, h.snow[i] + 4.4); landed = true; break; }
             }
           } else {
             const ew = 52, cr = 7 + h.eave * 0.4;
-            if (this._seg(f.x, f.y, h.x - ew, h.y, h.x + ew, h.y) < cr) { h.eave = Math.min(26, h.eave + 1.6); landed = true; }
+            if (this._seg(f.x, f.y, h.x - ew, h.y, h.x + ew, h.y) < cr) { h.eave = Math.min(34, h.eave + 2.2); landed = true; }
           }
           if (landed) break;
         }
@@ -308,15 +308,15 @@ export default class SnowHands extends VisionPiece {
       for (let i = 0; i < NSEG; i++) {
         if (h.snow[i] < 0.6) continue;
         const a = h.pts[SEG[i][0]], b = h.pts[SEG[i][1]];
-        const n = 4 + Math.min(10, (h.snow[i] / 2) | 0);   // 극적으로 후두둑
+        const n = 8 + Math.min(22, h.snow[i] | 0);         // 폭설처럼 후두두둑
         for (let k = 0; k < n; k++) {
           const u = Math.random();
-          this._spawnDrop(lerp(a.x, b.x, u), lerp(a.y, b.y, u), nx * rand(120, 260), ny * rand(120, 260) + 40);
+          this._spawnDrop(lerp(a.x, b.x, u), lerp(a.y, b.y, u), nx * rand(120, 300), ny * rand(120, 300) + 40);
         }
         h.snow[i] = 0;
       }
     } else if (h.eave > 0.6) {
-      const n = 1 + Math.min(6, (h.eave / 4) | 0);
+      const n = 3 + Math.min(14, (h.eave / 2) | 0);
       for (let k = 0; k < n; k++)
         this._spawnDrop(h.x + rand(-50, 50), h.y, nx * rand(120, 260), ny * rand(120, 260) + 40);
       h.eave = 0;

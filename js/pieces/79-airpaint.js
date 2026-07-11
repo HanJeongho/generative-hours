@@ -7,16 +7,20 @@
 //  그린다. 그린 획은 FADE초에 걸쳐 천천히 사라지고, 사라질 때 반짝이 입자로
 //  승화한다(영원한 낙서 방지 + 화면 자정). 손바닥을 쫙 펴고 문지르면 그
 //  반경의 획이 빨리 지워진다 — 지우개 손.
+//  ★대칭 그리기: 기본 '거울' — 한 획이 좌우 두 획으로(만화경 모드는 4방).
+//   한 번 슥 그으면 나비 날개처럼 좌우가 함께 피어난다.
+//  ★꼬집기 도장: 엄지+검지를 꼬집으면 그 자리에 별→하트→꽃 도장이 팡!
+//   (대칭 모드면 도장도 양쪽에 찍힌다) + 그리는 동안 붓끝에서 반짝이가 흩날림.
 //  카메라가 없으면 커서가 붓이 된다(드래그=그리기). 아무도 없으면 희미한
 //  물감 안개가 떠다녀 화면이 죽지 않는다. numHands = 4.
 // ============================================================================
 
 import { clamp, lerp, rand, TAU } from "../engine.js";
 import { VisionPiece } from "../vision.js";
-import { slider } from "./01-currents.js";
+import { slider, buttonRow } from "./01-currents.js";
 
-const MAXP = 1100;                 // 물감 포인트 풀(링버퍼)
-const MAXS = 420;                  // 반짝이 입자 풀
+const MAXP = 2600;                 // 물감 포인트 풀(링버퍼, 대칭 복제 포함)
+const MAXS = 600;                  // 반짝이 입자 풀
 const MIST = 22;                   // 앰비언트 안개
 const HUES = [344, 42, 190, 268];  // 손 인덱스별 고정 색상(장미·금·청록·보라)
 const CHAINS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [5, 9], [9, 10, 11, 12], [9, 13], [13, 14, 15, 16], [13, 17], [0, 17], [17, 18, 19, 20]];
@@ -27,6 +31,7 @@ export default class AirPaint extends VisionPiece {
 
   visionSetup() {
     this.fade = 9;                 // FADE 슬라이더 — 획 잔류 시간(초)
+    this.sym = 2;                  // 대칭: 1=자유, 2=거울(기본), 4=만화경
     this.pts = [];
     for (let i = 0; i < MAXP; i++)
       this.pts.push({ on: false, x: 0, y: 0, px: 0, py: 0, hue: 0, w: 0, life: 0, max: 1, cont: false });
@@ -40,7 +45,7 @@ export default class AirPaint extends VisionPiece {
       this.mist.push({ x: Math.random(), y: Math.random(), vx: rand(-1, 1), vy: rand(-1, 1), r: rand(90, 220), hue: HUES[i % 4] + rand(-24, 24), ph: rand(0, TAU) });
     this.hands = [];
     for (let i = 0; i < 4; i++)
-      this.hands.push({ on: false, draw: false, erase: false, cx: 0, cy: 0, r: 46, pts: null, tipx: 0, tipy: 0, ltx: 0, lty: 0, glow: 0, hueBase: HUES[i], hue: HUES[i] });
+      this.hands.push({ on: false, draw: false, erase: false, cx: 0, cy: 0, r: 46, pts: null, tipx: 0, tipy: 0, ltx: 0, lty: 0, glow: 0, hueBase: HUES[i], hue: HUES[i], pinch: false, pinchPrev: false, stampIdx: i });
     this._empty = 1;
   }
 
@@ -56,14 +61,26 @@ export default class AirPaint extends VisionPiece {
     let ft = 0;
     for (const i of [4, 8, 12, 16, 20]) ft += Math.hypot(pts[i].x - cx, pts[i].y - cy);
     ft /= 5;
-    return { pts, cx, cy, r: Math.max(30, r), tipx: pts[8].x, tipy: pts[8].y, spread: ft / ref };
+    const pinch = Math.hypot(pts[4].x - pts[8].x, pts[4].y - pts[8].y) / ref;
+    return { pts, cx, cy, r: Math.max(30, r), tipx: pts[8].x, tipy: pts[8].y, spread: ft / ref, pinch };
   }
 
-  _emit(px, py, x, y, hue, w) {
+  _emit1(px, py, x, y, hue, w) {
     const p = this.pts[this._pi];
     this._pi = (this._pi + 1) % MAXP;
     p.on = true; p.px = px; p.py = py; p.x = x; p.y = y;
     p.hue = hue; p.w = w; p.life = this.fade; p.max = this.fade; p.cont = true;
+  }
+
+  // 대칭 방출: 거울(좌우) / 만화경(상하좌우) — 복제마다 색상 살짝 회전
+  _emit(px, py, x, y, hue, w) {
+    const W = this.w, H = this.h;
+    this._emit1(px, py, x, y, hue, w);
+    if (this.sym >= 2) this._emit1(W - px, py, W - x, y, (hue + 26) % 360, w);
+    if (this.sym >= 4) {
+      this._emit1(px, H - py, x, H - y, (hue + 52) % 360, w);
+      this._emit1(W - px, H - py, W - x, H - y, (hue + 78) % 360, w);
+    }
   }
 
   _emitStroke(h, dt) {
@@ -80,6 +97,47 @@ export default class AirPaint extends VisionPiece {
       this._emit(lx, ly, x, y, h.hue, w);
       lx = x; ly = y;
     }
+    if (Math.random() < 0.35) this._sparkle(h.tipx, h.tipy, h.hue);   // 붓끝 반짝이
+  }
+
+  // 꼬집기 도장: 별 → 하트 → 꽃 순환 — 물감 획으로 팡 찍힘(대칭 모드면 양쪽에)
+  _stamp(h) {
+    const kind = h.stampIdx++ % 3;
+    const s = clamp(h.r * 0.55, 34, 76);
+    const cx = h.tipx, cy = h.tipy;
+    const poly = this._stampPoly(kind, s);
+    let lx = cx + poly[0][0], ly = cy + poly[0][1];
+    for (let k = 1; k < poly.length; k++) {
+      const x = cx + poly[k][0], y = cy + poly[k][1];
+      this._emit(lx, ly, x, y, h.hue, 7);
+      lx = x; ly = y;
+    }
+    for (let k = 0; k < 8; k++) this._sparkle(cx + rand(-s, s) * 0.5, cy + rand(-s, s) * 0.5, h.hue);
+  }
+  _stampPoly(kind, s) {
+    const out = [];
+    if (kind === 0) {                        // 별
+      for (let k = 0; k <= 10; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI) / 5;
+        const r = k % 2 ? s * 0.42 : s;
+        out.push([Math.cos(a) * r, Math.sin(a) * r]);
+      }
+    } else if (kind === 1) {                 // 하트
+      for (let k = 0; k <= 24; k++) {
+        const u = (k / 24) * TAU;
+        out.push([
+          s * 0.062 * 16 * Math.sin(u) ** 3,
+          -s * 0.062 * (13 * Math.cos(u) - 5 * Math.cos(2 * u) - 2 * Math.cos(3 * u) - Math.cos(4 * u)),
+        ]);
+      }
+    } else {                                 // 꽃(6잎 장미곡선)
+      for (let k = 0; k <= 48; k++) {
+        const u = (k / 48) * TAU;
+        const r = s * Math.abs(Math.cos(3 * u));
+        out.push([Math.cos(u) * r, Math.sin(u) * r]);
+      }
+    }
+    return out;
   }
 
   _sparkle(x, y, hue) {
@@ -104,7 +162,10 @@ export default class AirPaint extends VisionPiece {
         h.tipx = d.tipx; h.tipy = d.tipy;
         h.erase = d.spread > 1.55;
         h.draw = !h.erase;
-      } else { h.on = false; h.pts = null; h.draw = false; h.erase = false; }
+        h.pinch = d.pinch < 0.45 && !h.erase;
+        if (h.pinch && !h.pinchPrev) this._stamp(h);     // 꼬집는 순간 도장 팡
+        h.pinchPrev = h.pinch;
+      } else { h.on = false; h.pts = null; h.draw = false; h.erase = false; h.pinch = h.pinchPrev = false; }
     }
     this._scene(dt, t, true);
   }
@@ -227,8 +288,8 @@ export default class AirPaint extends VisionPiece {
     g.textAlign = "center"; g.textBaseline = "bottom";
     g.fillStyle = "rgba(222,216,242,0.6)";
     g.fillText(
-      viaCam ? "손가락으로 허공에 그려 보세요 — 검지 끝에서 빛 물감이 흘러요 · 손을 쫙 펴서 문지르면 지워져요"
-        : "카메라를 허용하면 손으로 그려요 — 지금은 드래그가 붓입니다 · 그림은 천천히 반짝이며 사라져요",
+      viaCam ? "검지로 그리면 거울처럼 양쪽에 피어나요 · 엄지+검지를 꼬집으면 별·하트·꽃 도장 팡! · 쫙 펴서 문지르면 지우개"
+        : "카메라를 허용하면 손으로 그려요 — 지금은 드래그가 붓 (거울 대칭!) · 그림은 천천히 반짝이며 사라져요",
       W / 2, H - 14);
 
     const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.78);
@@ -237,6 +298,11 @@ export default class AirPaint extends VisionPiece {
   }
 
   controls(host) {
+    host.appendChild(buttonRow([
+      { label: "자유", on: () => (this.sym = 1) },
+      { label: "거울", on: () => (this.sym = 2) },
+      { label: "만화경", on: () => (this.sym = 4) },
+    ]));
     host.appendChild(slider("FADE", 4, 14, this.fade, 0.5, (v) => (this.fade = v)));
   }
 }

@@ -10,10 +10,9 @@
 //    · 28수(宿) 방사 구획선과 적도·주극원을 희미하게 새긴다.
 //    · 정적 요소는 오프스크린에 한 번만 굽고(bake), 매 프레임은 blit + 오버레이.
 //
-//  ★홀드 = 지금의 하늘: 같은 별들을 위도 37.5°·현재 항성시(LST)로 회전시켜
-//   금빛 발광점으로 겹쳐 그린다. 돌의 새김(1395)과 금빛 별(오늘) 사이의 어긋남이
-//   곧 흘러간 세월(자전 + 세차)이다. 놓으면 서서히 소거된다.
-//  · 대표 별자리 근처에 포인터를 대면 그 새김이 달빛으로 은은히 불 밝고 이름표.
+//  ★손끝 = 달빛: 대표 별자리 근처에 포인터를 대면 그 새김이 달빛으로 은은히
+//   깨어난다. 이름표 팝업·홀드 오버레이 없이 빛만 — 대신 화면 오른쪽에 그
+//   별자리의 이야기를 적은 한지 패널이 함께 떠오른다.
 //
 //  좌표 의존 상수는 최상단 const로 노출(중앙에서 시각 캘리브레이션 예정).
 // ============================================================================
@@ -21,17 +20,12 @@
 import { Piece, TAU, clamp, lerp, map } from "../engine.js";
 
 // ---- 튜닝 가능한 캘리브레이션 상수 -----------------------------------------
-const LAT = 37.5;              // 관측 위도 (서울)
-const LON = 127.0;             // 관측 경도 (동경)
-const CHART_YEAR = 1395;       // 각석이 새긴 하늘의 해
-const NOW_YEAR = 2026;         // 겹쳐지는 오늘의 해
 const COLAT_MAX = 150;         // 투영 최외곽 여위도(적위 -60°까지 담음)
 const CIRCLE_FRAC = 0.43;      // 하늘 원 반지름 / min(W,H)
 const CENTER_Y_FRAC = 0.47;    // 하늘 원 중심 y (하단 캡션 공간 확보)
 const STONE_ROT = -0.35;       // 각석 새김의 고정 방위(1395의 한 순간, rad)
 const N_FILLER = 150;          // 절차적 새김별 개수
 const LUNAR_MANSIONS = 28;     // 28수 방사 구획
-const PRECESS_RAD = ((NOW_YEAR - CHART_YEAR) * TAU) / 25772; // 세차 근사 오프셋
 
 // ---- 밝은 별 목록: {id, ra(시), dec(도), m(등급)} --------------------------
 const BRIGHT = [
@@ -81,31 +75,38 @@ const BRIGHT = [
 ];
 
 // ---- 대표 별자리(터치 시 점등) ----------------------------------------------
-// stars: BRIGHT id 목록, lines: 그 배열 안 인덱스 쌍
+// stars: BRIGHT id 목록, lines: 그 배열 안 인덱스 쌍, alias/desc: 오른쪽 패널 텍스트
 const CONSTELLATIONS = [
-  { name: "북두칠성", stars: ["dubhe", "merak", "phecda", "megrez", "alioth", "mizar", "alkaid"],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]] },
-  { name: "카시오페이아", stars: ["caph", "schedar", "gcas", "ruchbah", "segin"],
-    lines: [[0, 1], [1, 2], [2, 3], [3, 4]] },
-  { name: "오리온", stars: ["betelgeuse", "bellatrix", "alnitak", "alnilam", "mintaka", "saiph", "rigel"],
-    lines: [[0, 1], [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6]] },
-  { name: "북극성", stars: ["polaris"], lines: [] },
-  { name: "여름 대삼각형", stars: ["vega", "deneb", "altair"], lines: [[0, 1], [1, 2], [2, 0]] },
-  { name: "겨울 대삼각형", stars: ["betelgeuse", "sirius", "procyon"], lines: [[0, 1], [1, 2], [2, 0]] },
-  { name: "전갈자리", stars: ["antares", "dschubba", "shaula"], lines: [[1, 0], [0, 2]] },
-  { name: "목동자리", stars: ["arcturus"], lines: [] },
+  { name: "북두칠성", alias: "北斗七星 — 자미원의 국자",
+    stars: ["dubhe", "merak", "phecda", "megrez", "alioth", "mizar", "alkaid"],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
+    desc: "일곱 별이 국자 모양으로 북쪽 하늘을 도는 길잡이. 옛사람들은 국자 자루가 가리키는 방향으로 계절을 읽었다. 각석에서도 가장 또렷하게 새겨진 별무리다." },
+  { name: "카시오페이아", alias: "王良 — 임금의 마부",
+    stars: ["caph", "schedar", "gcas", "ruchbah", "segin"],
+    lines: [[0, 1], [1, 2], [2, 3], [3, 4]],
+    desc: "W자로 꺾인 다섯 별. 동양 천문에서는 임금의 수레를 모는 마부 왕량으로 보았다. 북극성을 사이에 두고 북두칠성과 마주 보며 돈다." },
+  { name: "오리온", alias: "參宿 — 삼형제 별",
+    stars: ["betelgeuse", "bellatrix", "alnitak", "alnilam", "mintaka", "saiph", "rigel"],
+    lines: [[0, 1], [0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6]],
+    desc: "겨울 하늘의 사냥꾼. 허리띠의 세 별을 동양에서는 삼수(參宿)라 불렀다. 어깨의 붉은 베텔게우스와 발끝의 푸른 리겔이 색의 대조를 이룬다." },
+  { name: "북극성", alias: "帝星 곁 — 하늘의 축",
+    stars: ["polaris"], lines: [],
+    desc: "온 하늘이 이 한 점을 중심으로 돈다. 동양 천문에서 북극 곁은 임금의 자리 — 천상열차분야지도의 모든 원이 여기에서 시작된다." },
+  { name: "여름 대삼각형", alias: "직녀와 견우의 하늘",
+    stars: ["vega", "deneb", "altair"], lines: [[0, 1], [1, 2], [2, 0]],
+    desc: "직녀별 베가, 견우로 이어지는 알타이르, 백조의 꼬리 데네브. 은하수를 사이에 둔 칠석 이야기의 무대다." },
+  { name: "겨울 대삼각형", alias: "가장 밝은 세 별",
+    stars: ["betelgeuse", "sirius", "procyon"], lines: [[0, 1], [1, 2], [2, 0]],
+    desc: "베텔게우스·시리우스·프로키온 — 밤하늘에서 가장 밝은 별들이 이루는 거의 정확한 정삼각형. 겨울 남쪽 하늘의 이정표다." },
+  { name: "전갈자리", alias: "心宿 — 하늘의 붉은 심장",
+    stars: ["antares", "dschubba", "shaula"], lines: [[1, 0], [0, 2]],
+    desc: "여름 남쪽 하늘에 붉게 타는 안타레스. 동양에서는 하늘의 심장 심수(心宿)로 새겼고, 화성과 붉기를 겨룬다 하여 '화성의 맞수'라 불렀다." },
+  { name: "목동자리", alias: "大角 — 큰 뿔",
+    stars: ["arcturus"], lines: [],
+    desc: "북두의 자루 곡선을 따라 미끄러져 내려오면 만나는 주황빛 아르크투루스. 동양에서는 하늘의 큰 뿔, 대각(大角)이라 불렀다." },
 ];
 
-const CAPTION = "1395년의 하늘 위에, 꾹 누르면 오늘 밤 하늘이 겹쳐진다.";
-
-// 현지 항성시(도) — 자전에 의한 오늘 하늘의 방위
-function localSiderealDeg(date, lonDeg) {
-  const JD = date.getTime() / 86400000 + 2440587.5;
-  const D = JD - 2451545.0;
-  let gmst = 280.46061837 + 360.98564736629 * D;
-  let lst = ((gmst + lonDeg) % 360 + 360) % 360;
-  return lst;
-}
+const CAPTION = "별자리 가까이 손을 대면, 새겨진 별이 달빛으로 깨어난다.";
 
 export default class Cheonsang extends Piece {
   setup() {
@@ -115,9 +116,8 @@ export default class Cheonsang extends Piece {
     this.gid = Object.create(null);
     for (let i = 0; i < BRIGHT.length; i++) this.gid[BRIGHT[i].id] = i;
 
-    // 별 화면좌표 버퍼(무할당 재사용): stone(각석) / gold(오늘)
+    // 별 화면좌표 버퍼(무할당 재사용): stone(각석)
     this.stone = BRIGHT.map(() => ({ x: 0, y: 0, r: 0, vis: true }));
-    this.gold = BRIGHT.map(() => ({ x: 0, y: 0, r: 0, vis: true }));
 
     // 별자리 점등 강도(이징)
     this.lit = new Float32Array(CONSTELLATIONS.length);
@@ -131,15 +131,7 @@ export default class Cheonsang extends Piece {
       this.filler.push({ ang, cr, m: 3.2 + this._rng() * 1.8 });
     }
 
-    // 오늘 하늘 겹침 정도 (홀드 0→1, 릴리즈 1→0)
-    this.reveal = 0;
-
-    // 항성시(0.5초마다 갱신)
-    this._lstDeg = localSiderealDeg(new Date(), LON);
-    this._lstT = 0;
-
     // 스프라이트(발광점) — 프레임 무할당 blit용
-    this._goldSprite = this._mkGlow(["#fff0c8", "#f2c063", "#e0a03a"], true);
     this._moonSprite = this._mkGlow(["#eaf2ff", "#a8c4ee", "#5f7bb0"]);
 
     this._grain = this._mkGrain(150);
@@ -418,15 +410,6 @@ export default class Cheonsang extends Piece {
     const W = this.w, H = this.h;
     if (this._need || !this._baked) this._bake();
 
-    // 항성시 갱신(0.5s)
-    if (t - this._lstT > 0.5) { this._lstDeg = localSiderealDeg(new Date(), LON); this._lstT = t; }
-
-    // 겹침 이징
-    const target = this.pointer.down ? 1 : 0;
-    this.reveal = target > this.reveal
-      ? Math.min(1, this.reveal + dt * 1.7)   // 등장 ~0.6s 페이드
-      : Math.max(0, this.reveal - dt * 1.3);
-
     // 배경(각석) blit — 디바이스 픽셀 1:1
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -435,12 +418,10 @@ export default class Cheonsang extends Piece {
     // 이후 오버레이는 CSS 좌표계
     g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
 
-    // 별자리 점등(터치 근접)
+    // 별자리 점등(터치 근접) — 빛 + 오른쪽 이야기 패널
     this._updateConstellations(dt);
     this._drawConstellations(g);
-
-    // 오늘 하늘(금빛) 겹침
-    if (this.reveal > 0.004) this._drawToday(g, t);
+    this._drawPanel(g);
 
     // 비네팅 + 캡션
     this._drawVignette(g, W, H);
@@ -484,78 +465,83 @@ export default class Cheonsang extends Piece {
         g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
       }
       // 별(달빛 발광)
-      let mx = 0, my = 0;
       for (let k = 0; k < con.stars.length; k++) {
         const p = this.stone[this.gid[con.stars[k]]];
         this._blitGlow(g, this._moonSprite, p.x, p.y, (p.r + 5) * 1.9, 0.85 * a);
-        mx += p.x; my += p.y;
       }
-      mx /= con.stars.length; my /= con.stars.length;
-      // 이름표 — 한지 톤 작은 명패
-      g.globalCompositeOperation = "source-over";
-      const SS = Math.max(1, S);
-      const fs = 12 * SS;
-      g.font = `600 ${fs}px ui-sans-serif, system-ui, sans-serif`;
-      g.textAlign = "center";
-      g.textBaseline = "middle";
-      const ly = my - (this.stone[this.gid[con.stars[0]]].r + 20) * SS;
-      const tw = g.measureText(con.name).width;
-      const padX = 9 * SS, padY = 5 * SS;
-      const bw = tw + padX * 2, bh = fs + padY * 2;
-      g.globalAlpha = a;
-      this._roundRect(g, mx - bw / 2, ly - bh / 2, bw, bh, 4 * SS);
-      g.fillStyle = "rgba(232,224,201,0.92)";        // 한지 바탕
-      g.fill();
-      g.lineWidth = 1;
-      g.strokeStyle = "rgba(60,52,40,0.35)";         // 옅은 먹선 테두리
-      g.stroke();
-      g.fillStyle = "rgba(40,34,28,0.94)";           // 먹 글씨
-      g.fillText(con.name, mx, ly + 0.5 * SS);
       g.globalAlpha = 1;
-      g.textBaseline = "alphabetic";
     }
+    g.restore();
+  }
+
+  // 오른쪽 이야기 패널 — 가장 밝게 점등된 별자리 하나를 한지 명패로
+  _drawPanel(g) {
+    let best = -1, a = 0.04;
+    for (let c = 0; c < CONSTELLATIONS.length; c++)
+      if (this.lit[c] > a) { a = this.lit[c]; best = c; }
+    if (best < 0) return;
+    const con = CONSTELLATIONS[best];
+    const W = this.w;
+    const S = Math.max(1, this._S || 1);
+    const pw = Math.min(300 * S, W * 0.3);
+    const pad = 16 * S;
+    const titleFs = 17 * S, aliasFs = 11.5 * S, bodyFs = 12.5 * S, lh = bodyFs * 1.62;
+
+    g.save();
+    g.font = `400 ${bodyFs}px ui-sans-serif, system-ui, sans-serif`;
+    // 줄바꿈 캐시 — 별자리·폭이 바뀔 때만 재계산
+    const key = best + "|" + (pw | 0);
+    if (this._panelKey !== key) {
+      this._panelKey = key;
+      this._panelLines = this._wrap(g, con.desc, pw - pad * 2);
+    }
+    const lines = this._panelLines;
+    const ph = pad * 2 + titleFs + aliasFs + 20 * S + lh * 0.9 + lines.length * lh;
+    const px = W - pw - 20 * S + (1 - a) * 24;   // 오른쪽에서 살짝 밀려 들어오는 등장
+    const py = this._cy - ph / 2;
+
+    g.globalAlpha = a;
+    this._roundRect(g, px, py, pw, ph, 6 * S);
+    g.fillStyle = "rgba(230,222,199,0.93)";      // 한지 바탕
+    g.fill();
+    g.lineWidth = 1;
+    g.strokeStyle = "rgba(60,52,40,0.4)";        // 옅은 먹선 테두리
+    g.stroke();
+
+    g.textAlign = "left"; g.textBaseline = "alphabetic";
+    let ty = py + pad + titleFs * 0.82;
+    g.fillStyle = "rgba(38,32,26,0.95)";
+    g.font = `700 ${titleFs}px ui-sans-serif, system-ui, sans-serif`;
+    g.fillText(con.name, px + pad, ty);
+    ty += aliasFs + 8 * S;
+    g.fillStyle = "rgba(122,86,40,0.9)";         // 주사(朱砂) 톤 부제
+    g.font = `600 ${aliasFs}px ui-sans-serif, system-ui, sans-serif`;
+    g.fillText(con.alias, px + pad, ty);
+    ty += 12 * S;
+    g.strokeStyle = "rgba(60,52,40,0.28)";       // 먹선 구분선
+    g.beginPath(); g.moveTo(px + pad, ty); g.lineTo(px + pw - pad, ty); g.stroke();
+    ty += lh * 0.9;
+    g.fillStyle = "rgba(50,44,36,0.92)";
+    g.font = `400 ${bodyFs}px ui-sans-serif, system-ui, sans-serif`;
+    for (let i = 0; i < lines.length; i++) { g.fillText(lines[i], px + pad, ty); ty += lh; }
+    g.globalAlpha = 1;
     g.textAlign = "start";
     g.restore();
   }
 
-  // 오늘 하늘: 항성시 회전 + 세차 오프셋으로 겹쳐 그린 금빛 별
-  _drawToday(g, t) {
-    const S = this._S || 1;
-    const rev = this.reveal;
-    const ease = rev * rev * (3 - 2 * rev);           // smoothstep 페이드
-    const alignRot = (1 - ease) * 0.14;               // 등장 시 살짝 돌아 정렬
-    const goldRot = STONE_ROT + (this._lstDeg / 360) * TAU + PRECESS_RAD + alignRot;
-    // 위치 갱신(무할당)
-    for (let i = 0; i < BRIGHT.length; i++) {
-      const s = BRIGHT[i];
-      const p = this._project(s.ra, s.dec, goldRot, this.gold[i]);
-      p.r = this._mag2r(s.m, S);
+  // CJK 문자 단위 줄바꿈(공백 뒤 끊기 선호)
+  _wrap(g, text, maxW) {
+    const lines = [];
+    let line = "";
+    for (const ch of text) {
+      const test = line + ch;
+      if (g.measureText(test).width > maxW && line) {
+        lines.push(line);
+        line = ch === " " ? "" : ch;
+      } else line = test;
     }
-    const shimmer = 0.85 + 0.15 * Math.sin(t * 2.2);
-
-    g.save();
-    g.globalCompositeOperation = "lighter";
-    // 별 — 더 크고 부드러운 금빛 글로우
-    for (let i = 0; i < BRIGHT.length; i++) {
-      const p = this.gold[i];
-      if (!p.vis) continue;
-      const tw = 0.9 + 0.1 * Math.sin(t * 3 + i * 1.7);
-      this._blitGlow(g, this._goldSprite, p.x, p.y, (p.r + 6) * 2.9, ease * shimmer * tw);
-    }
-    // 대표 별자리 금빛 선(어긋남을 드러냄)
-    g.strokeStyle = `rgba(245,205,120,${0.3 * ease})`;
-    g.lineWidth = 1.2;
-    for (let c = 0; c < CONSTELLATIONS.length; c++) {
-      const con = CONSTELLATIONS[c];
-      for (let l = 0; l < con.lines.length; l++) {
-        const p = this.gold[this.gid[con.stars[con.lines[l][0]]]];
-        const q = this.gold[this.gid[con.stars[con.lines[l][1]]]];
-        if (!p.vis || !q.vis) continue;
-        g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
-      }
-    }
-    g.globalAlpha = 1;
-    g.restore();
+    if (line) lines.push(line);
+    return lines;
   }
 
   _drawVignette(g, W, H) {
@@ -580,9 +566,7 @@ export default class Cheonsang extends Piece {
   teardown() {
     this._off = null;
     this._grain = null;
-    this._goldSprite = null;
     this._moonSprite = null;
     this.stone = null;
-    this.gold = null;
   }
 }

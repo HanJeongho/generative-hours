@@ -13,8 +13,9 @@
 //    오프스크린에 한 번 그린 뒤 스무딩 업스케일 → 공짜 블러(핫루프 무할당).
 //  · 문지르기 = 브러시 반경 안 밀도를 깎고, 포인터 속도 방향 앞쪽 칸에 살짝
 //    쌓아 '밀려나 흐르는' 느낌. 회복 = 골짜기 가중 + 아래칸 밀도로 상승(창발).
-//  · 클릭 = 소나기 한 줄기(먹비 입자 풀) + 안개가 짙어지고 바위가 잠깐 더
-//    젖어(어두워져) 번들거림.
+//  · 클릭 = 햇살(霽色) 한 줄기 — 그림의 제목 그대로 '비 갠 볕'이 그 자리에
+//    기울어 내리꽂히며, 빛기둥 안 안개를 태워 걷고 바위를 따뜻하게 비춘다.
+//    몇 초 뒤 볕이 물러가면 안개가 다시 스민다.
 //  안개는 순백이 아니라 한지빛(240,238,230)에 먹기가 살짝 섞인 색.
 // ============================================================================
 
@@ -39,14 +40,15 @@ const MIST_BASE = 0.86;                // 기본 안개 밀도(가만두면 이 
 const MIST_VAR = 0.16;                 // 노이즈 billow 진폭
 const REC_BASE = 0.24;                 // 기본 회복 속도(MIST 슬라이더가 곱함)
 
-// ── 브러시(문지르기) / 소나기 ───────────────────────────────────────────────
+// ── 브러시(문지르기) / 햇살 ─────────────────────────────────────────────────
 const CELL = 9;                        // 밀도장 격자 한 칸(스크린 px 목표)
 const BRUSH_STRENGTH = 5.2;            // 초당 안개 깎는 세기
 const PUSH_FRAC = 0.45;                // 밀려난 안개가 앞쪽에 쌓이는 비율
-const RAIN_MAX = 260;                  // 먹비 입자 풀 크기
-const RAIN_BURST = 96;                 // 클릭 한 줄기당 입자 수
 const NSCALE = 0.0055;                 // 노이즈 공간 스케일(해상도 독립)
 const DRIFTX = 0.055, DRIFTY = -0.014; // 안개 이류(옆에서 흘러드는 감각)
+const SUN_FADE = 0.38;                 // 햇살 잦아드는 속도(≈2.6s)
+const SUN_BURN = 3.4;                  // 빛기둥 안 안개 태우는 세기
+const SUN_SLANT = -0.14;               // 빛기둥 기울기(위가 오른쪽 — 오후의 볕)
 
 export default class Inwang extends Piece {
   setup() {
@@ -54,13 +56,8 @@ export default class Inwang extends Piece {
     this.noise = makeNoise();
 
     this.mist = 1.0;        // MIST 슬라이더 — 안개 회복 속도 배수
-    this.wet = 0;           // 소나기 직후 바위 젖음(어두움) 정도
-    this.mistBoost = 0;     // 소나기 시 안개가 짙어지는 가산
-
-    // 먹비 입자 풀 (고정 크기, 무할당 재사용)
-    this.rain = new Array(RAIN_MAX);
-    for (let i = 0; i < RAIN_MAX; i++) this.rain[i] = { x: 0, y: 0, vx: 0, vy: 0, len: 0, a: 0, on: false };
-    this.rainHead = 0;
+    this.sun = 0;           // 햇살 세기 [0..1] — 클릭 시 1, 서서히 사그라듦
+    this.sunX = 0;          // 빛기둥이 땅에 닿는 x(스크린)
 
     this.ready = false;
     this.failed = false;
@@ -113,25 +110,11 @@ export default class Inwang extends Piece {
     this.mistImg = this.mistG.createImageData(GW, GH);
   }
 
-  // 클릭 = 소나기 한 줄기 (먹비 쏟아짐 + 안개 짙어짐 + 바위 젖음)
+  // 클릭 = 햇살(霽色) 한 줄기 — 그 자리에 볕이 기울어 내리며 안개를 태운다
   onPointerDown() {
     if (!this.pointer.active) return;
-    this.wet = 1;
-    this.mistBoost = Math.min(0.45, this.mistBoost + 0.34);
-    const px = this.pointer.x;
-    const W = this.w, H = this.h;
-    const spread = W * 0.055;
-    for (let k = 0; k < RAIN_BURST; k++) {
-      const d = this.rain[this.rainHead];
-      this.rainHead = (this.rainHead + 1) % RAIN_MAX;
-      d.on = true;
-      d.x = px + (Math.random() - 0.5) * 2 * spread;
-      d.y = -Math.random() * H * 0.5;
-      d.vy = H * (1.5 + Math.random() * 0.8);
-      d.vx = H * 0.10;                 // 살짝 비스듬히
-      d.len = H * (0.05 + Math.random() * 0.06);
-      d.a = 0.35 + Math.random() * 0.35;
-    }
+    this.sun = 1;
+    this.sunX = this.pointer.x;
   }
 
   // ==========================================================================
@@ -151,24 +134,22 @@ export default class Inwang extends Piece {
     if (this.ready) g.drawImage(this.img, 0, 0, IMG_W, IMG_H, rect.dx, rect.dy, rect.dw, rect.dh);
     else this._drawFallback(g, t);
 
-    // 2) 소나기 직후 바위 젖음(어두워져 번들거림)
-    if (this.wet > 0.002) {
-      g.fillStyle = `rgba(22,26,34,${this.wet * 0.30})`;
-      g.fillRect(rect.dx, rect.dy, rect.dw, rect.dh);
-      this.wet = Math.max(0, this.wet - dts * 0.42);
+    // 2) 햇살 — 빛기둥 안 안개를 태우고, 볕은 서서히 물러간다
+    if (this.sun > 0.003) {
+      this._sunBurn(dts);
+      this.sun = Math.max(0, this.sun - dts * SUN_FADE);
     }
-    this.mistBoost = Math.max(0, this.mistBoost - dts * 0.16);
 
-    // 3) 먹비 입자 (안개 아래 — 대기 속 비로 읽힘)
-    this._drawRain(g, dts, H);
-
-    // 4) 문지르기 — 안개를 깎아 밀어낸다
+    // 3) 문지르기 — 안개를 깎아 밀어낸다
     if (this.pointer.active) this._wipe(dts);
 
-    // 5) 안개장 갱신 + 오프스크린 렌더 + 업스케일 블러
+    // 4) 안개장 갱신 + 오프스크린 렌더 + 업스케일 블러
     this._updateAndRenderMist(t, dts);
     g.imageSmoothingEnabled = true;
     g.drawImage(this.mistCv, 0, 0, this.GW, this.GH, 0, 0, W, H);
+
+    // 5) 햇살 빛기둥(안개 위에 얹혀 대기 산란으로 읽힘)
+    if (this.sun > 0.003) this._drawSun(g, W, H);
 
     // 6) 은은한 비네팅 + 하단 캡션
     const vg = g.createRadialGradient(W * 0.5, H * 0.52, Math.min(W, H) * 0.34, W * 0.5, H * 0.54, Math.max(W, H) * 0.75);
@@ -193,7 +174,7 @@ export default class Inwang extends Piece {
 
   // ── 문지르기: 브러시 반경 안 밀도 깎기 + 속도 방향 앞쪽에 쌓기 ─────────────
   _wipe(dts) {
-    const R = Math.min(this.w, this.h) * 0.52;      // 브러시 반경(스크린 px) — 아주 크게 걷힘
+    const R = Math.min(this.w, this.h) * 0.62;      // 브러시 반경(스크린 px) — 아주 크게 걷힘
     const gcx = this.pointer.x / this.cw, gcy = this.pointer.y / this.ch;
     const rcx = R / this.cw, rcy = R / this.ch;
     const vx = this.pointer.vx, vy = this.pointer.vy;
@@ -240,7 +221,7 @@ export default class Inwang extends Piece {
         const n1 = this.noise(sx * NSCALE + tdx, sy * NSCALE + tdy);
         const n2 = this.noise(sx * NSCALE * 2.3 - tdx * 0.7, sy * NSCALE * 2.3 + tdy * 1.3);
         const billow = n1 * 0.62 + n2 * 0.38;
-        let target = MIST_BASE + billow * MIST_VAR + vw * VALLEY_LIFT + this.mistBoost;
+        let target = MIST_BASE + billow * MIST_VAR + vw * VALLEY_LIFT;
         if (target > 1.18) target = 1.18;
         // 회복은 '그 자리'가 아니라 양옆에서 구름처럼 스며든다:
         // 이웃(좌우) 칸의 밀도가 있어야 나도 차오른다 — 걷힌 구멍은
@@ -263,22 +244,55 @@ export default class Inwang extends Piece {
     this.mistG.putImageData(this.mistImg, 0, 0);
   }
 
-  // ── 먹비 입자 (풀 재사용) ───────────────────────────────────────────────────
-  _drawRain(g, dts, H) {
-    g.save();
-    g.lineCap = "round";
-    for (let i = 0; i < RAIN_MAX; i++) {
-      const r = this.rain[i];
-      if (!r.on) continue;
-      r.y += r.vy * dts; r.x += r.vx * dts;
-      if (r.y - r.len > H) { r.on = false; continue; }
-      g.strokeStyle = `rgba(34,40,52,${r.a})`;
-      g.lineWidth = 1.4;
-      g.beginPath();
-      g.moveTo(r.x, r.y);
-      g.lineTo(r.x - r.vx * 0.06, r.y - r.len);
-      g.stroke();
+  // ── 햇살: 기울어진 빛기둥 안 안개 밀도를 태운다(무할당) ─────────────────────
+  _sunBurn(dts) {
+    const GW = this.GW, GH = this.GH, d = this.d;
+    const H = this.h;
+    const hw = this.w * 0.085;                       // 기둥 반너비
+    for (let gy = 0; gy < GH; gy++) {
+      const sy = (gy + 0.5) * this.ch;
+      const bx = this.sunX + (sy - H) * SUN_SLANT;   // 바닥에서 sunX에 닿는 기울어진 중심
+      const gx0 = Math.max(0, Math.floor((bx - hw) / this.cw));
+      const gx1 = Math.min(GW - 1, Math.ceil((bx + hw) / this.cw));
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const dx = (gx + 0.5) * this.cw - bx;
+        const f = 1 - Math.abs(dx) / hw;
+        if (f <= 0) continue;
+        const i = gy * GW + gx;
+        d[i] -= SUN_BURN * this.sun * f * f * dts;
+        if (d[i] < 0) d[i] = 0;
+      }
     }
+  }
+
+  // ── 햇살 빛기둥 + 볕 웅덩이(가산) ───────────────────────────────────────────
+  _drawSun(g, W, H) {
+    const s = this.sun;
+    const e = s * s * (3 - 2 * s);                   // smoothstep 페이드
+    const hw = W * 0.085;
+    const topX = this.sunX - H * SUN_SLANT;
+    g.save();
+    g.globalCompositeOperation = "lighter";
+    const grad = g.createLinearGradient(topX, 0, this.sunX, H);
+    grad.addColorStop(0, `rgba(255,241,196,${0.30 * e})`);
+    grad.addColorStop(0.75, `rgba(255,228,168,${0.13 * e})`);
+    grad.addColorStop(1, "rgba(255,220,150,0)");
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(topX - hw * 0.7, 0);
+    g.lineTo(topX + hw * 0.7, 0);
+    g.lineTo(this.sunX + hw, H);
+    g.lineTo(this.sunX - hw, H);
+    g.closePath();
+    g.fill();
+    // 볕이 닿는 산자락의 따뜻한 웅덩이
+    const py = H * 0.72;
+    const px = this.sunX + (py - H) * SUN_SLANT;
+    const pool = g.createRadialGradient(px, py, 0, px, py, W * 0.16);
+    pool.addColorStop(0, `rgba(255,214,150,${0.20 * e})`);
+    pool.addColorStop(1, "rgba(255,200,130,0)");
+    g.fillStyle = pool;
+    g.fillRect(px - W * 0.16, py - W * 0.16, W * 0.32, W * 0.32);
     g.restore();
   }
 
@@ -306,7 +320,6 @@ export default class Inwang extends Piece {
 
   teardown() {
     this.img = null;
-    this.rain = null;
     this.d = null; this.ink = null;
     this.mistCv = null; this.mistImg = null;
   }

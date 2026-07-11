@@ -13,13 +13,13 @@
 //  그 빛 웅덩이가 두 사람과 담벼락에 번지며 밤 그레이딩이 그 반경만큼 걷힌다.
 //  불이 무르익으면(warmth 후반부) 여인과 선비의 볼에 발그스레한 홍조가 수줍게
 //  스민다. 손을 놓으면 불은 3초에 걸쳐 천천히 사그라들고 홍조도 잦아든다.
-//  담 모퉁이에는 반딧불이 몇 마리가 떠다니다, 불이 밝으면 초롱 곁으로 모여든다.
+//  빛은 오직 초롱불 하나 — 다른 광원은 없다.
 //
 //  · 모든 연출은 원작 픽셀 위에 곱(multiply)·가산(lighter) 합성으로만 얹는다.
 //  · 밤 그레이딩 = 초롱 중심 방사 그라데이션의 곱하기 한 장. 중심 stop을 warmth로
 //    들어 올려(neutral로) '불빛 반경만 밤이 걷히는' 효과를 단일 패스로 낸다.
-//  · 초롱 발광/빛 웅덩이/홍조/반딧불이 = 전부 가산 방사 그라데이션. 반딧불이는
-//    고정 크기 풀(무할당). 플리커는 value-noise 한 번 샘플.
+//  · 초롱 발광/빛 웅덩이/홍조 = 전부 가산 방사 그라데이션.
+//    플리커는 value-noise 한 번 샘플.
 // ============================================================================
 
 import { Piece, clamp, lerp, makeNoise } from "../engine.js";
@@ -42,7 +42,6 @@ const BLUSH_ONSET = 0.55;                 // warmth 이 지점부터 홍조가 �
 const NIGHT = [176, 187, 214];            // multiply 색(≈0.72 어둡힘, 살짝 푸르게)
 const LIFT  = [252, 246, 236];            // 불빛 중심에서 밤이 걷힌 뒤의 색(따뜻한 중립)
 
-const NUM_FLY = 3;                        // 반딧불이 마리 수
 const smooth01 = (x) => { x = clamp(x, 0, 1); return x * x * (3 - 2 * x); };
 
 export default class Wolha extends Piece {
@@ -52,23 +51,6 @@ export default class Wolha extends Piece {
 
     this.warmth = 0;      // 초롱불 게이지 [0..1] — 꾹 누름에 따라 차오르고 사그라듦
 
-    // 반딧불이 풀(고정 크기, 핫루프 무할당). 담 모퉁이(하단부)에 흩어져 시작.
-    this.flies = new Array(NUM_FLY);
-    const homes = [ [0.50, 0.78], [0.63, 0.70], [0.43, 0.84] ];
-    for (let i = 0; i < NUM_FLY; i++) {
-      const h = homes[i % homes.length];
-      this.flies[i] = {
-        hu: h[0], hv: h[1],                 // 배회 중심(이미지 비율)
-        au: 0.05 + Math.random() * 0.04,    // 배회 진폭
-        av: 0.04 + Math.random() * 0.04,
-        wu: 0.35 + Math.random() * 0.3,     // 배회 각속도
-        wv: 0.3 + Math.random() * 0.3,
-        p1: Math.random() * 6.28, p2: Math.random() * 6.28,
-        bs: 1.4 + Math.random() * 1.2,      // 점멸 속도
-        bp: Math.random() * 6.28,           // 점멸 위상
-      };
-    }
-
     this.ready = false;
     this.failed = false;
     this.img = new Image();
@@ -77,9 +59,9 @@ export default class Wolha extends Piece {
     this.img.src = IMG_SRC;
   }
 
-  // 원작을 화면에 cover(가득 채움)로 배치 — 밤이 화면을 꽉 덮게.
+  // 원작을 화면 안에 contain(여백 포함)으로 배치 — 그림 전체가 액자처럼 보이게.
   _coverRect() {
-    const s = Math.max(this.w / IMG_W, this.h / IMG_H);
+    const s = Math.min(this.w / IMG_W, this.h / IMG_H) * 0.92;
     const dw = IMG_W * s, dh = IMG_H * s;
     return { dx: (this.w - dw) / 2, dy: (this.h - dh) / 2, dw, dh };
   }
@@ -165,9 +147,6 @@ export default class Wolha extends Piece {
       }
     }
 
-    // 7) 반딧불이 — 담 모퉁이를 떠다니다, 불이 밝으면 초롱 곁으로 모여든다
-    this._drawFlies(g, t, rect, lx, ly, w);
-
     g.globalCompositeOperation = "source-over";
 
     // 8) 은은한 비네팅 + 하단 화제/안내
@@ -196,29 +175,6 @@ export default class Wolha extends Piece {
     bg.addColorStop(1, "rgba(230,100,100,0)");
     g.fillStyle = bg;
     g.fillRect(x - r, y - r, r * 2, r * 2);
-  }
-
-  // ── 반딧불이 풀(무할당 재사용) ──────────────────────────────────────────────
-  _drawFlies(g, t, rect, lx, ly, w) {
-    const gather = w * 0.7;               // 불이 밝을수록 초롱 쪽으로 배회 중심 이동
-    const r0 = Math.max(this.w, this.h) * 0.012;
-    for (let i = 0; i < NUM_FLY; i++) {
-      const f = this.flies[i];
-      // 배회 중심(이미지 비율) → 화면. warmth로 초롱 쪽 lerp.
-      const cx = rect.dx + f.hu * rect.dw, cy = rect.dy + f.hv * rect.dh;
-      const bx = lerp(cx, lx, gather), by = lerp(cy, ly, gather);
-      const ax = f.au * rect.dw * (1 - 0.6 * gather), ay = f.av * rect.dh * (1 - 0.6 * gather);
-      const x = bx + Math.sin(t * f.wu + f.p1) * ax;
-      const y = by + Math.cos(t * f.wv + f.p2) * ay;
-      const blink = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * f.bs + f.bp));
-      const r = r0 * (0.8 + 0.4 * blink);
-      const fg = g.createRadialGradient(x, y, 0, x, y, r * 3);
-      fg.addColorStop(0, `rgba(210,255,150,${0.55 * blink})`);
-      fg.addColorStop(0.4, `rgba(170,230,110,${0.22 * blink})`);
-      fg.addColorStop(1, "rgba(150,220,100,0)");
-      g.fillStyle = fg;
-      g.fillRect(x - r * 3, y - r * 3, r * 6, r * 6);
-    }
   }
 
   // ── 하단 화제 + 꾹 누르기 안내 ──────────────────────────────────────────────
@@ -253,6 +209,5 @@ export default class Wolha extends Piece {
 
   teardown() {
     this.img = null;
-    this.flies = null;
   }
 }
