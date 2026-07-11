@@ -193,7 +193,7 @@ export default class Inwang extends Piece {
 
   // ── 문지르기: 브러시 반경 안 밀도 깎기 + 속도 방향 앞쪽에 쌓기 ─────────────
   _wipe(dts) {
-    const R = Math.min(this.w, this.h) * 0.26;      // 브러시 반경(스크린 px) — 크게 걷힘
+    const R = Math.min(this.w, this.h) * 0.52;      // 브러시 반경(스크린 px) — 아주 크게 걷힘
     const gcx = this.pointer.x / this.cw, gcy = this.pointer.y / this.ch;
     const rcx = R / this.cw, rcy = R / this.ch;
     const vx = this.pointer.vx, vy = this.pointer.vy;
