@@ -1639,23 +1639,38 @@ const thumbPainters = {
     ctx.fillStyle = clr;
     ctx.beginPath(); ctx.ellipse(cx, cy, W * 0.28, H * 0.22, -0.3, 0, Math.PI * 2); ctx.fill();
   },
-  "83"(ctx, W, H, a) {                       // ssireum — Kim Hong-do (판의 쏠림)
+  "83"(ctx, W, H, a) {                       // ssireum — "한 판 붙자" (들배지기)
     const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#efe6d0"); bg.addColorStop(1, "#e2d4b6");
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-    const cx = W * 0.52, cy = H * 0.52, R = Math.min(W, H);
-    ctx.strokeStyle = "rgba(226,96,63,0.5)"; ctx.lineWidth = 2;                 // 함성 파문
-    ctx.beginPath(); ctx.arc(cx, cy, R * 0.34, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = "#2a2320";                                                 // 구경꾼 링
+    const cx = W * 0.54, cy = H * 0.52, R = Math.min(W, H);
+    // 함성 파문 링
+    ctx.strokeStyle = "rgba(226,96,63,0.45)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy + H * 0.02, R * 0.34, 0, Math.PI * 2); ctx.stroke();
+    // 관중 링(뒷줄 종이 인형)
+    ctx.fillStyle = "#2a2320";
     for (let i = 0; i < 15; i++) {
       const ang = (i / 15) * Math.PI * 2 - 1, rr = R * (0.31 + (i % 3) * 0.02);
-      const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr * 0.92;
-      ctx.beginPath(); ctx.arc(x, y, W * 0.027, 0, Math.PI * 2); ctx.fill();
+      const x = cx + Math.cos(ang) * rr, y = cy + Math.sin(ang) * rr * 0.92 - H * 0.02;
+      ctx.beginPath(); ctx.arc(x, y, W * 0.026, 0, Math.PI * 2); ctx.fill();
     }
-    ctx.strokeStyle = "#2a2320"; ctx.lineWidth = W * 0.05; ctx.lineCap = "round"; // 씨름꾼 2명
-    ctx.beginPath(); ctx.moveTo(cx - W * 0.08, cy + H * 0.09); ctx.quadraticCurveTo(cx, cy - H * 0.11, cx + W * 0.02, cy + H * 0.02); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(cx + W * 0.09, cy + H * 0.09); ctx.quadraticCurveTo(cx, cy - H * 0.05, cx - W * 0.02, cy + H * 0.02); ctx.stroke();
-    ctx.fillStyle = "#2a2320"; ctx.beginPath(); ctx.arc(W * 0.13, H * 0.8, W * 0.032, 0, Math.PI * 2); ctx.fill(); // 엿장수(홀로)
-    ctx.fillStyle = "#e2603f"; ctx.beginPath(); ctx.arc(W * 0.13, H * 0.76, W * 0.014, 0, Math.PI * 2); ctx.fill();
+    // 들배지기 — 기울어 들린 씨름꾼 한 덩어리(발밑 피벗 회전)
+    ctx.save();
+    ctx.translate(cx, cy + H * 0.09);
+    ctx.rotate(-0.24);
+    ctx.strokeStyle = "#2a2320"; ctx.lineWidth = W * 0.055; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(-W * 0.08, 0); ctx.quadraticCurveTo(0, -H * 0.15, W * 0.03, -H * 0.05); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W * 0.09, 0); ctx.quadraticCurveTo(0, -H * 0.08, -W * 0.02, -H * 0.05); ctx.stroke();
+    ctx.restore();
+    // 발밑 모래 먼지 버스트
+    ctx.fillStyle = "rgba(205,182,132,0.9)";
+    for (let i = 0; i < 9; i++) {
+      const ang = -Math.PI / 2 + (i / 9 - 0.5) * 2.2, d = R * (0.05 + (i % 3) * 0.02);
+      ctx.beginPath(); ctx.arc(cx + Math.cos(ang) * d, cy + H * 0.15 + Math.sin(ang) * d * 0.5, W * 0.012, 0, Math.PI * 2); ctx.fill();
+    }
+    // 엿장수(홀로 무심) + '…'
+    ctx.fillStyle = "#2a2320"; ctx.beginPath(); ctx.arc(W * 0.13, H * 0.66, W * 0.03, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(42,35,32,0.7)";
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(W * 0.13 + (i - 1) * W * 0.022, H * 0.57, W * 0.007, 0, Math.PI * 2); ctx.fill(); }
   },
   "84"(ctx, W, H, a) {
     const p = typeof a === "number" ? a : 0;
@@ -1794,6 +1809,48 @@ const thumbPainters = {
     for (let i = 0; i < 7; i++) { const y = top + vh * (.15 + i * .11); ctx.beginPath(); ctx.moveTo(cx - mr * .6, y); ctx.lineTo(cx + mr * (.5 - i * .1), y + mr * .18); ctx.stroke(); }
     ctx.restore();
     ctx.strokeStyle = "rgba(20,50,55,.5)"; ctx.lineWidth = 1.2; ctx.stroke();
+  },
+  "89"(ctx, W, H, a) {                       // 월하정인 — 초롱불을 켜는 손
+    // 밤 담모퉁이
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#1a1b2e"); sky.addColorStop(1, "#0c0b14");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "#201f2b"; ctx.fillRect(0, H * 0.52, W, H * 0.48);   // 담벼락
+    // 초승달 + 달무리 (좌상)
+    const mx = W * 0.27, my = H * 0.21;
+    ctx.globalCompositeOperation = "lighter";
+    const mg = ctx.createRadialGradient(mx, my, 0, mx, my, W * 0.22);
+    mg.addColorStop(0, "rgba(196,212,248,0.22)"); mg.addColorStop(1, "rgba(180,198,240,0)");
+    ctx.fillStyle = mg; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "rgba(228,232,246,0.92)";
+    ctx.beginPath(); ctx.arc(mx, my, W * 0.05, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#141525";                                          // 초승달 그믐부 컷
+    ctx.beginPath(); ctx.arc(mx + W * 0.026, my - W * 0.016, W * 0.05, 0, Math.PI * 2); ctx.fill();
+    // 두 인물 실루엣 (여인·선비)
+    ctx.fillStyle = "rgba(210,214,222,0.85)";
+    ctx.beginPath(); ctx.ellipse(W * 0.63, H * 0.62, W * 0.055, H * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(226,228,234,0.9)";
+    ctx.beginPath(); ctx.ellipse(W * 0.8, H * 0.6, W * 0.05, H * 0.22, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#15141c";                                          // 선비 갓
+    ctx.beginPath(); ctx.ellipse(W * 0.8, H * 0.36, W * 0.06, H * 0.03, 0, 0, Math.PI * 2); ctx.fill();
+    // 초롱불 발광 (우하)
+    const lx = W * 0.82, ly = H * 0.62;
+    ctx.globalCompositeOperation = "lighter";
+    const lg = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.42);
+    lg.addColorStop(0, "rgba(255,196,110,0.72)"); lg.addColorStop(0.4, "rgba(255,150,70,0.3)"); lg.addColorStop(1, "rgba(255,120,50,0)");
+    ctx.fillStyle = lg; ctx.fillRect(0, 0, W, H);
+    const lc = ctx.createRadialGradient(lx, ly, 0, lx, ly, W * 0.07);
+    lc.addColorStop(0, "rgba(255,244,200,0.95)"); lc.addColorStop(1, "rgba(255,180,90,0)");
+    ctx.fillStyle = lc; ctx.fillRect(0, 0, W, H);
+    // 반딧불이 두 점
+    for (let i = 0; i < 2; i++) {
+      const fx = W * (0.4 + i * 0.12), fy = H * (0.78 - i * 0.06);
+      const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, W * 0.03);
+      fg.addColorStop(0, "rgba(210,255,150,0.8)"); fg.addColorStop(1, "rgba(170,230,110,0)");
+      ctx.fillStyle = fg; ctx.fillRect(fx - W * 0.03, fy - W * 0.03, W * 0.06, W * 0.06);
+    }
+    ctx.globalCompositeOperation = "source-over";
   },
   "51"(ctx, W, H, a) {                       // (vault) helios — boiling star, corona, prominence
     ctx.fillStyle = "#030204"; ctx.fillRect(0, 0, W, H);

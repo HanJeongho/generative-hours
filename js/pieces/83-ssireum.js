@@ -1,75 +1,65 @@
 // ============================================================================
-//  83 · 씨름 (After Kim Hong-do — "Ssireum", 김홍도 《씨름》, 18C · public domain)
-//  「먹과 달」 XII관. 이 그림의 주인공은 씨름꾼이 아니라 '판'이다 — 둘레를 빽빽이
-//  메운 구경꾼들의 시선과 들썩임, 그리고 판에 아랑곳없이 등 돌린 엿장수의 유머.
+//  83 · 씨름 · "한 판 붙자" (After Kim Hong-do — 김홍도 《씨름》, 18C · public domain)
+//  「먹과 달」관. 원작에서 씨름꾼 두 명을 누끼로 오려내고, 남은 자리(모래판)를
+//  인페인트한 배경판 위에 그 누끼 스프라이트를 정확히 제자리에 앉혔다 — 37 가나가와
+//  파도와 같은 '페이퍼 시어터' 방식. 평상시엔 원작과 한 치도 다르지 않게 보이지만,
+//  씨름꾼은 아주 미세하게 숨을 쉰다.
 //
-//  원작 이미지(assets/art/ssireum.jpg, 1400×1666)를 훼손 없이 그대로 깔되,
-//  인물이 앉은 자리(FIGURES 타원 목록)마다 그 조각을 '살짝 살아있게' 만든다:
-//   · 평소 : 각 인물 영역이 아주 작은 진폭으로 숨쉰다(39식 국소 워프를 변환-패치로
-//            경량화 — 타원에 clip한 뒤 그 안의 그림만 미세 회전/신축).
-//   · 씨름꾼 클릭 = 기술!(들배지기) : 중앙이 크게 들리고 기울며, 그 순간 판 전체
-//            구경꾼이 일제히 중앙으로 쏠린다(시선 쏠림). 함성 파문 링이 퍼지고
-//            갓·부채가 들썩이는 입자가 인다. 1.5초에 걸쳐 서서히 제자리로.
-//   · 구경꾼 호버 = 그 사람만 갸웃(작은 워프).
-//   · 엿장수(좌하단)만은 미동도 없다 — 원작의 유머를 캡션으로 짚어준다.
+//  씨름꾼을 누르고 있으면 힘 게이지가 차오르고(부르르 떨며 웅크림), 손을 놓는 순간
+//  들배지기! — 게이지에 비례해 크게 기울며 들썩 떠올랐다 쿵 내려앉는다(스쿼시&스트레치
+//  0.9초 스프링, 방향은 매번 교대). 착지 찰나 발밑에서 모래 먼지가 터지고 화면이 살짝
+//  흔들리며 함성의 파문 링이 한 겹 번진다. 그 순간 판을 에워싼 관중 구역(상·좌·우·하
+//  네 밴드)이 시차를 두고 '들썩' — 원작을 왜곡하는 게 아니라, 종이 인형극에서 뒷줄 종이
+//  인형들이 순서대로 튕겨오르는 결이다.
 //
-//  미학 : 원작 존중 + 한지·먹·단청. 좌표 상수는 최상단에 노출(중앙 캘리브레이션).
-//  성능 : 인물별 패치는 바운딩박스만 다시 그림(무 per-frame 할당), 입자/링은 풀.
+//  좌측 중단의 엿장수만은 어떤 소동에도 미동이 없다. 그를 클릭하면 머리 위로 '…'가
+//  떴다 사라질 뿐 — 끝까지 무심한 조선 회화의 유머.
+//
+//  성능 : 이미지 두 장(배경판·누끼)만 로드. 스프라이트는 매 프레임 변환-그리기 1회,
+//         밴드 들썩은 기술 중에만 4스트립. 모래/링은 풀(핫루프 무할당).
 // ============================================================================
 
 import { Piece, TAU, clamp, lerp, hexToRgb } from "../engine.js";
 import { slider, buttonRow } from "./01-currents.js";
 
-const IMG_SRC = "assets/art/ssireum.jpg";
-const IMG_W = 1400, IMG_H = 1666;          // 원본 픽셀
+const BG_SRC = "assets/art/ssireum-bg.jpg";
+const SP_SRC = "assets/art/ssireum-wrestlers.png";
+const BG_W = 1400, BG_H = 1666;          // 배경판 원본 픽셀
+const SP_W = 546,  SP_H = 692;           // 누끼 스프라이트 픽셀
 
-// ---- 인물 영역(이미지 비율 0..1 타원) — 중앙에서 시각 캘리브레이션 예정 ---------
-// kind: "wrestler"(중앙 씨름꾼 2명) · "spectator"(둘레 구경꾼) · "yeot"(엿장수)
-// u,v = 중심, rx,ry = 반경(이미지 폭/높이 대비 비율). 대략값으로 시작.
-const FIGURES = [
-  { u: 0.50, v: 0.50, rx: 0.165, ry: 0.185, kind: "wrestler" },   // [0] 판의 중심
-  // 위쪽(뒷줄) 구경꾼 — 작게
-  { u: 0.33, v: 0.22, rx: 0.055, ry: 0.070, kind: "spectator" },
-  { u: 0.43, v: 0.17, rx: 0.055, ry: 0.070, kind: "spectator" },
-  { u: 0.53, v: 0.16, rx: 0.055, ry: 0.070, kind: "spectator" },
-  { u: 0.63, v: 0.18, rx: 0.055, ry: 0.070, kind: "spectator" },
-  { u: 0.72, v: 0.24, rx: 0.055, ry: 0.070, kind: "spectator" },
-  // 오른쪽 무리
-  { u: 0.81, v: 0.35, rx: 0.058, ry: 0.075, kind: "spectator" },
-  { u: 0.84, v: 0.47, rx: 0.058, ry: 0.078, kind: "spectator" },
-  { u: 0.82, v: 0.59, rx: 0.060, ry: 0.080, kind: "spectator" },
-  // 왼쪽 무리
-  { u: 0.20, v: 0.30, rx: 0.056, ry: 0.072, kind: "spectator" },
-  { u: 0.17, v: 0.42, rx: 0.056, ry: 0.075, kind: "spectator" },
-  { u: 0.21, v: 0.54, rx: 0.058, ry: 0.078, kind: "spectator" },
-  // 앞줄(아래) 구경꾼 — 화면 가까워 크게
-  { u: 0.29, v: 0.79, rx: 0.075, ry: 0.095, kind: "spectator" },
-  { u: 0.42, v: 0.86, rx: 0.078, ry: 0.098, kind: "spectator" },
-  { u: 0.59, v: 0.85, rx: 0.078, ry: 0.098, kind: "spectator" },
-  { u: 0.72, v: 0.79, rx: 0.075, ry: 0.095, kind: "spectator" },
-  // 중앙 좌우 채움
-  { u: 0.35, v: 0.66, rx: 0.060, ry: 0.080, kind: "spectator" },
-  { u: 0.66, v: 0.68, rx: 0.060, ry: 0.080, kind: "spectator" },
-  // 엿장수 — 판을 등지고 앉아 미동도 없다
-  { u: 0.13, v: 0.78, rx: 0.062, ry: 0.088, kind: "yeot" },
+// ---- 스프라이트 원위치(배경 이미지 비율 bbox) — 중앙 캘리브레이션 상수 ----------
+const SP_U0 = 0.405, SP_V0 = 0.330, SP_U1 = 0.795, SP_V1 = 0.745;
+
+// ---- 엿장수 영역(좌측 중단, 이미지 비율 rect) — 클릭 히트 + '…' 앵커 ------------
+const YEOT_U0 = 0.10, YEOT_V0 = 0.44, YEOT_U1 = 0.28, YEOT_V1 = 0.66;
+
+// ---- 관중 네 밴드(이미지 비율 rect) — 엿장수(좌중단)를 피해 잡음 ------------------
+//  [u0, v0, u1, v1, delay]  delay = 들썩 시차(초)
+const BANDS = [
+  [0.06, 0.030, 0.94, 0.190, 0.00],   // 상단(뒷줄)
+  [0.780, 0.200, 0.980, 0.740, 0.06], // 우측 무리
+  [0.06, 0.800, 0.94, 0.970, 0.12],   // 하단(앞줄)
+  [0.020, 0.140, 0.240, 0.420, 0.18], // 좌측 상무리(엿장수 위)
 ];
-const CENTER_U = 0.50, CENTER_V = 0.52;    // 시선이 쏠리는 판의 중심
 
 // ---- 모션 튜닝(중앙 조정) --------------------------------------------------
-const BREATHE_ROT   = 0.009;   // 평소 숨결 회전 진폭(rad) — 아주 작게
-const BREATHE_SCALE = 0.006;   // 평소 숨결 신축 진폭
-const HOVER_TILT    = 0.065;   // 구경꾼 호버 갸웃(rad)
-const LEAN_ROT      = 0.11;    // 기술 시 구경꾼이 중앙으로 기우는 각(rad)
-const LEAN_PUSH     = 0.06;    // 기술 시 중앙으로 당겨지는 정도(반경 비율)
-const LIFT_ROT      = 0.15;    // 씨름꾼 들배지기 기울임(rad)
-const LIFT_SCALE    = 0.16;    // 씨름꾼 수직 들림(신축)
-const TECH_DUR      = 1.5;     // 기술 → 복귀 시간(초)
-const CLIP_OVER     = 1.06;    // 패치 clip 여유(솔기 완화)
+const CHARGE_TIME = 1.3;               // 완전 충전까지(초)
+const THROW_DUR   = 0.9;               // 들배지기 스프링 전체 시간(초)
+const SLAM_AT     = 0.55;              // 이 진행도에서 착지(모래·셰이크·링)
+const MAX_TILT    = 16 * Math.PI / 180; // 들배지기 최대 기울임(rad)
+const IDLE_ROCK   = 0.4 * Math.PI / 180; // 유휴 록킹 진폭(rad)
+const IDLE_BREATHE= 0.010;             // 유휴 호흡 신축(1%)
+const HOVER_SCALE = 1.02;              // 커서 올리면 긴장
+const CROUCH      = 0.07;              // 충전 웅크림(세로 압축 최대)
+const SQUASH      = 0.14;              // 착지 스쿼시 최대
+const BAND_DUR    = 0.20;              // 밴드 한 번 들썩 시간(초)
 
-// 한지·먹·단청 톤
+// 한지·먹 톤
 const HANJI_TOP = "#efe6d0";
 const HANJI_BOT = "#e4d6b8";
-const INK       = "#2a2320";
+
+// 모래 먼지 색(핫루프 무할당 — 인덱스로 골라 씀)
+const SAND = ["#d8c49a", "#cdb684", "#e3d3ac", "#c2a771", "#d0bd90"];
 
 export default class Ssireum extends Piece {
   setup() {
@@ -77,101 +67,139 @@ export default class Ssireum extends Piece {
     this.accentRgb = hexToRgb(this.accent || "#e2603f");
 
     // 슬라이더 상태
-    this.breath = 1.0;     // 숨결 세기
-    this.roar = 1.0;       // 함성/쏠림 세기
+    this.force = 1.0;      // 힘/기울임 세기 배수
+    this.roar  = 1.0;      // 함성(셰이크·링·밴드 들썩) 세기
 
-    // 기술(들배지기) 에너지: 클릭 시 1 → TECH_DUR 동안 0으로
-    this.tech = 0;
-    this.hovered = -1;     // 현재 호버된 구경꾼 인덱스
+    // 인터랙션 상태
+    this.charging = false; // 씨름꾼을 누르고 있는가
+    this.gauge = 0;        // 힘 게이지 0..1
+    this.throwing = false; // 들배지기 진행 중
+    this.throwP = 0;       // 들배지기 진행도 0..1
+    this.throwStr = 0;     // 이번 판 힘(릴리즈 시점 게이지)
+    this.throwDir = 1;     // 넘기는 방향(매번 교대)
+    this._nextDir = 1;
+    this._slammed = false; // 이번 판 착지 처리 완료?
+    this.hover = 0;        // 커서 긴장 이징 0..1
+    this.shake = 0;        // 화면 셰이크 0..1
+    this.bandT = -1;       // 밴드 들썩 경과(초), -1=비활성
 
-    // 인물 런타임 상태(위상만 미리 배정 — 핫루프 무할당)
-    this.fig = FIGURES.map((f, i) => ({
-      phase: (i * 1.7) % TAU,
-      sp: 0.5 + (i % 5) * 0.13,      // 개인차 있는 숨결 속도
-      wob: (i * 0.37) % TAU,
-      hov: 0,                        // 호버 이징값
-    }));
-
+    // 모래 먼지 풀
+    this.parts = [];
+    for (let i = 0; i < 60; i++) {
+      this.parts.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, sz: 1, rot: 0, spin: 0, ci: 0 });
+    }
     // 함성 파문 링 풀
     this.rings = [];
-    for (let i = 0; i < 5; i++) this.rings.push({ r: 0, life: 0 });
+    for (let i = 0; i < 3; i++) this.rings.push({ x: 0, y: 0, r: 0, life: 0 });
 
-    // 갓/부채 들썩임 입자 풀
-    this.parts = [];
-    for (let i = 0; i < 140; i++) {
-      this.parts.push({ x: 0, y: 0, vx: 0, vy: 0, life: 0, max: 1, rot: 0, spin: 0, fan: false });
-    }
+    // 엿장수 머리 위 '…'
+    this.yeotDot = 0;      // 0..1 수명
 
-    // 이미지 로드
-    this.ready = false; this.failed = false;
-    this.img = new Image();
-    this.img.onload = () => { this.ready = true; };
-    this.img.onerror = () => { this.failed = true; };
-    this.img.src = IMG_SRC;
+    // 밴드별 들썩 크기(1~3px) — 릴리즈마다 재추첨
+    this.bandMag = [0, 0, 0, 0];
+
+    // 이미지 두 장 로드
+    this.bgReady = false; this.spReady = false; this.failed = false;
+    this.bg = new Image();
+    this.bg.onload = () => { this.bgReady = true; };
+    this.bg.onerror = () => { this.failed = true; };
+    this.bg.src = BG_SRC;
+    this.sp = new Image();
+    this.sp.onload = () => { this.spReady = true; };
+    this.sp.onerror = () => { this.failed = true; };
+    this.sp.src = SP_SRC;
   }
 
-  // 원작을 contain으로 배치(비율 유지) — 상하 캡션 공간 살짝 남김
+  get ready() { return this.bgReady && this.spReady; }
+
+  // 배경판을 contain으로 배치(비율 유지) — 하단 캡션 여유
   _fit() {
     const W = this.w, H = this.h;
     const pad = Math.min(W, H) * 0.03;
-    const aw = W - pad * 2, ah = H - pad * 2 - H * 0.05;   // 하단 캡션 여유
-    const ar = IMG_W / IMG_H;
+    const aw = W - pad * 2, ah = H - pad * 2 - H * 0.05;
+    const ar = BG_W / BG_H;
     let dw = aw, dh = aw / ar;
     if (dh > ah) { dh = ah; dw = ah * ar; }
     return { dx: (W - dw) / 2, dy: (H - dh) / 2 - H * 0.015, dw, dh };
   }
 
-  // 화면상 인물 타원 기하
-  _geo(f, r) {
+  // 스프라이트 화면 사각형(bbox)
+  _spRect(r) {
     return {
-      cx: r.dx + f.u * r.dw,
-      cy: r.dy + f.v * r.dh,
-      rx: f.rx * r.dw,
-      ry: f.ry * r.dh,
+      x: r.dx + SP_U0 * r.dw,
+      y: r.dy + SP_V0 * r.dh,
+      w: (SP_U1 - SP_U0) * r.dw,
+      h: (SP_V1 - SP_V0) * r.dh,
     };
   }
 
-  _inside(g, px, py) {
-    const nx = (px - g.cx) / g.rx, ny = (py - g.cy) / g.ry;
-    return nx * nx + ny * ny <= 1;
-  }
+  _inRect(px, py, x, y, w, h) { return px >= x && px <= x + w && py >= y && py <= y + h; }
 
-  // 씨름꾼을 클릭하면 기술! (판 전체 쏠림)
+  // ---- 포인터 -----------------------------------------------------------------
   onPointerDown() {
     if (!this.ready) return;
     const r = this._fit();
-    const g0 = this._geo(FIGURES[0], r);
-    if (this._inside(g0, this.pointer.x, this.pointer.y)) this._technique(r);
+    const s = this._spRect(r);
+    // 씨름꾼을 누르면 충전 시작
+    if (this._inRect(this.pointer.x, this.pointer.y, s.x, s.y, s.w, s.h)) {
+      if (!this.throwing) { this.charging = true; this.gauge = 0; }
+      return;
+    }
+    // 엿장수를 클릭하면 '…'만 (끝까지 무심)
+    const yx = r.dx + YEOT_U0 * r.dw, yy = r.dy + YEOT_V0 * r.dh;
+    const yw = (YEOT_U1 - YEOT_U0) * r.dw, yh = (YEOT_V1 - YEOT_V0) * r.dh;
+    if (this._inRect(this.pointer.x, this.pointer.y, yx, yy, yw, yh)) this.yeotDot = 1;
   }
 
-  _technique(r) {
-    this.tech = 1;
-    // 함성 파문 링 — 중앙에서
-    const cx = r.dx + CENTER_U * r.dw, cy = r.dy + CENTER_V * r.dh;
-    let launched = 0;
+  onPointerUp() {
+    if (this.charging) { this.charging = false; this._release(); }
+  }
+
+  // 들배지기 격발
+  _release() {
+    if (this.throwing) return;
+    this.throwStr = clamp(this.gauge, 0.12, 1);   // 짧게 눌러도 작게나마 걸림
+    this.gauge = 0;
+    this.throwDir = this._nextDir;
+    this._nextDir = -this._nextDir;                // 방향 교대
+    this.throwing = true;
+    this.throwP = 0;
+    this._slammed = false;
+    // 관중 밴드 들썩 예약 + 크기 추첨(1~3px)
+    this.bandT = 0;
+    for (let i = 0; i < 4; i++) this.bandMag[i] = (1 + Math.random() * 2) * this.roar;
+  }
+
+  // 프로그램적 격발(버튼)
+  _trigger(str) {
+    if (this.throwing) return;
+    this.gauge = str;
+    this._release();
+  }
+
+  // 착지 순간: 모래 버스트 + 셰이크 + 함성 링
+  _slam(feetX, feetY) {
+    this.shake = Math.min(1, 0.7 * this.roar + this.throwStr * 0.4);
+    // 함성 링 1개
     for (const ring of this.rings) {
-      if (ring.life <= 0) { ring.r = Math.min(r.dw, r.dh) * 0.08; ring.life = 1; launched++; }
-      if (launched >= 2) break;
+      if (ring.life <= 0) { ring.x = feetX; ring.y = feetY; ring.r = 8; ring.life = 1; break; }
     }
-    this._ringCx = cx; this._ringCy = cy;
-    // 갓·부채 들썩임 — 구경꾼 머리 위에서 튀어오름(엿장수/씨름꾼 제외)
-    for (let i = 1; i < FIGURES.length; i++) {
-      if (FIGURES[i].kind !== "spectator") continue;
-      const gm = this._geo(FIGURES[i], r);
-      this._spawnPart(gm.cx + (Math.random() - 0.5) * gm.rx, gm.cy - gm.ry * 0.85, i % 3 === 0);
-    }
-  }
-
-  _spawnPart(x, y, fan) {
+    // 모래 먼지 버스트 — 발밑 좌우로 낮게 튀김
+    const n = Math.round(18 + this.throwStr * 16);
+    let spawned = 0;
     for (const p of this.parts) {
       if (p.life > 0) continue;
-      p.x = x; p.y = y;
-      p.vx = (Math.random() - 0.5) * 40;
-      p.vy = -60 - Math.random() * 70;
-      p.life = 1; p.max = 0.7 + Math.random() * 0.6;
-      p.rot = Math.random() * TAU; p.spin = (Math.random() - 0.5) * 6;
-      p.fan = fan;
-      return;
+      const ang = (Math.random() - 0.5) * Math.PI * 0.9 - Math.PI / 2; // 위쪽 부채
+      const sp = 60 + Math.random() * 160 * (0.5 + this.throwStr);
+      p.x = feetX + (Math.random() - 0.5) * this.w * 0.02;
+      p.y = feetY;
+      p.vx = Math.cos(ang) * sp * (Math.random() < 0.5 ? -1 : 1) * 0.6 + (Math.random() - 0.5) * 80;
+      p.vy = Math.sin(ang) * sp - 20;
+      p.life = 1; p.max = 0.5 + Math.random() * 0.7;
+      p.sz = 2 + Math.random() * 4;
+      p.rot = Math.random() * TAU; p.spin = (Math.random() - 0.5) * 8;
+      p.ci = (Math.random() * SAND.length) | 0;
+      if (++spawned >= n) break;
     }
   }
 
@@ -186,199 +214,244 @@ export default class Ssireum extends Piece {
     this._paperBg(g, W, H);
 
     if (!this.ready) {
-      this._msg(g, W, H, this.failed ? "그림을 불러올 수 없습니다" : "판이 열리는 중…");
-      if (this.failed) this._caption(g, W, H);
+      this._msg(g, W, H, this.failed ? "판을 불러올 수 없습니다" : "판이 열리는 중…");
+      if (this.failed) { this._caption(g, W, H); return; }
       return;
     }
 
     const r = this._fit();
+    const s = this._spRect(r);
+    const pvx = s.x + s.w * 0.5;          // 피벗: 발 근처 하단 중앙
+    const pvy = s.y + s.h * 0.98;
 
-    // 기술 에너지 감쇠(1.5초 복귀)
-    if (this.tech > 0) this.tech = Math.max(0, this.tech - dt / TECH_DUR);
-    const techE = this._ease(this.tech) * this.roar;    // 0..~1
+    // --- 상태 업데이트 --------------------------------------------------------
+    if (this.charging) this.gauge = Math.min(1, this.gauge + dt / CHARGE_TIME);
 
-    // 호버 판정(구경꾼만)
-    this.hovered = -1;
-    if (this.pointer.active) {
-      for (let i = 1; i < FIGURES.length; i++) {
-        if (FIGURES[i].kind !== "spectator") continue;
-        if (this._inside(this._geo(FIGURES[i], r), this.pointer.x, this.pointer.y)) { this.hovered = i; break; }
-      }
+    if (this.throwing) {
+      this.throwP += dt / THROW_DUR;
+      if (!this._slammed && this.throwP >= SLAM_AT) { this._slam(pvx, pvy); this._slammed = true; }
+      if (this.throwP >= 1) { this.throwing = false; this.throwP = 0; }
     }
 
-    // 1) 원작을 있는 그대로 (훼손 없음)
-    g.drawImage(this.img, 0, 0, IMG_W, IMG_H, r.dx, r.dy, r.dw, r.dh);
+    // 호버 긴장(충전·기술 중이 아닐 때만)
+    let wantHover = 0;
+    if (this.pointer.active && !this.charging && !this.throwing &&
+        this._inRect(this.pointer.x, this.pointer.y, s.x, s.y, s.w, s.h)) wantHover = 1;
+    this.hover = lerp(this.hover, wantHover, clamp(dt * 10, 0, 1));
 
-    // 2) 인물 자리마다 '살아있는' 패치 덧그리기
-    const cx0 = r.dx + CENTER_U * r.dw, cy0 = r.dy + CENTER_V * r.dh;
-    for (let i = 0; i < FIGURES.length; i++) {
-      const f = FIGURES[i], s = this.fig[i];
-      s.hov = lerp(s.hov, this.hovered === i ? 1 : 0, clamp(dt * 8, 0, 1));
-      this._drawPatch(g, f, s, i, r, t, techE, cx0, cy0);
+    // 셰이크 감쇠
+    if (this.shake > 0) this.shake = Math.max(0, this.shake - dt * 3.2);
+    const shMag = this.shake * Math.min(W, H) * 0.012;
+    const shx = shMag ? (Math.random() - 0.5) * 2 * shMag : 0;
+    const shy = shMag ? (Math.random() - 0.5) * 2 * shMag : 0;
+
+    // 밴드 들썩 진행
+    if (this.bandT >= 0) {
+      this.bandT += dt;
+      if (this.bandT > 0.18 + BAND_DUR) this.bandT = -1;
     }
 
-    // 3) 함성 파문 링
-    this._drawRings(g, dt);
+    // --- 셰이크 그룹: 배경판·밴드·씨름꾼·모래·링 ------------------------------
+    g.save();
+    g.translate(shx, shy);
 
-    // 4) 갓·부채 입자
+    // 1) 배경판(원작에서 씨름꾼만 지운 판)
+    g.drawImage(this.bg, 0, 0, BG_W, BG_H, r.dx, r.dy, r.dw, r.dh);
+
+    // 2) 관중 밴드 들썩(기술 중에만) — 뒷줄 종이 인형이 순서대로 튕김
+    if (this.bandT >= 0) this._drawBands(g, r);
+
+    // 3) 씨름꾼 누끼 — 변환 후 1회 그리기
+    this._drawWrestlers(g, r, s, pvx, pvy, t);
+
+    // 4) 모래 먼지
     this._drawParts(g, dt);
 
-    // 5) 판이 달아오르면 중앙에 아주 옅은 단청빛 열기
-    if (techE > 0.02) this._heat(g, cx0, cy0, r, techE);
+    // 5) 함성 파문 링
+    this._drawRings(g, dt);
+
+    g.restore();
+
+    // 6) 엿장수 '…' (셰이크 밖 — 무심하게 안정)
+    if (this.yeotDot > 0) { this.yeotDot = Math.max(0, this.yeotDot - dt / 1.6); this._drawYeotDot(g, r); }
 
     this._caption(g, W, H);
   }
 
-  _ease(x) { return x * x * (3 - 2 * x); }   // smoothstep
+  // ---- 씨름꾼 변환 -----------------------------------------------------------
+  _drawWrestlers(g, r, s, pvx, pvy, t) {
+    // 유휴 숨결
+    let rot = Math.sin(t * 0.9) * IDLE_ROCK;
+    const breathe = 1 + Math.sin(t * 1.1) * IDLE_BREATHE;
+    let sx = breathe, sy = breathe, ox = 0, oy = 0;
 
-  // ---- 인물 패치: 타원에 clip → 그 안의 원작만 미세 변환 --------------------
-  _drawPatch(g, f, s, i, r, t, techE, cx0, cy0) {
-    const gm = this._geo(f, r);
-    const yeot = f.kind === "yeot";
-    const wrestler = f.kind === "wrestler";
+    // 커서 긴장
+    const hv = lerp(1, HOVER_SCALE, this.hover);
+    sx *= hv; sy *= hv;
 
-    // --- 이 인물의 변환량 산출 ---
-    let rot = 0, sx = 1, sy = 1, tx = 0, ty = 0, pvx = gm.cx, pvy = gm.cy;
-
-    if (!yeot) {
-      // 평소 숨결(엿장수 제외: 미동도 없다)
-      const br = this.breath;
-      const ph = t * s.sp + s.phase;
-      rot += Math.sin(ph) * BREATHE_ROT * br;
-      const bs = 1 + Math.sin(ph * 1.3 + s.wob) * BREATHE_SCALE * br;
-      sx *= bs; sy *= bs;
+    // 충전: 웅크림 + 부르르 떨림
+    if (this.charging) {
+      const gv = this.gauge;
+      sy *= 1 - CROUCH * gv;
+      sx *= 1 + CROUCH * 0.5 * gv;
+      const tr = gv * gv;
+      rot += (Math.random() - 0.5) * 0.03 * tr;
+      ox += (Math.random() - 0.5) * 3 * tr;
+      oy += (Math.random() - 0.5) * 3 * tr;
     }
 
-    if (wrestler && techE > 0.001) {
-      // 들배지기: 발밑을 축으로 들어올리며 기울인다
-      pvy = gm.cy + gm.ry * 0.85;
-      const dir = Math.sin(this.fig[i].wob) >= 0 ? 1 : -1;   // 넘기는 방향(고정)
-      rot += LIFT_ROT * techE * dir;
-      sy *= 1 + LIFT_SCALE * techE;
-      ty -= gm.ry * 0.10 * techE;
-    } else if (f.kind === "spectator" && techE > 0.001) {
-      // 시선 쏠림: 중앙으로 상체를 기울이고 살짝 당겨진다
-      const dx = cx0 - gm.cx;
-      const sign = dx >= 0 ? 1 : -1;                  // 위쪽이 중앙으로 향하도록
-      rot += LEAN_ROT * techE * sign;
-      const d = Math.hypot(dx, cy0 - gm.cy) || 1;
-      tx += (dx / d) * gm.rx * LEAN_PUSH * techE;
-      ty += ((cy0 - gm.cy) / d) * gm.ry * LEAN_PUSH * techE;
+    // 들배지기: 기울임 + 들림(포물선) + 착지 스쿼시
+    if (this.throwing) {
+      const p = this.throwP, str = this.throwStr * this.force;
+      rot += MAX_TILT * this.throwDir * str * Math.sin(p * Math.PI);
+      if (p <= SLAM_AT) {
+        // 체공: 위로 떴다 내려옴(포물선) + 이륙 스트레치
+        const u = p / SLAM_AT;
+        const hop = 4 * u * (1 - u);                 // 0→1→0
+        oy -= s.h * 0.16 * str * hop;
+        const st = 0.08 * str * Math.sin(u * Math.PI);
+        sy *= 1 + st; sx *= 1 - st * 0.5;
+      } else {
+        // 착지: 감쇠 스프링 스쿼시(발은 붙박이)
+        const u2 = (p - SLAM_AT) / (1 - SLAM_AT);
+        const comp = SQUASH * str * Math.exp(-u2 * 5) * Math.cos(u2 * 14);
+        sy *= 1 - comp;
+        sx *= 1 + comp * 0.6;
+      }
     }
-
-    if (!yeot && s.hov > 0.001) {
-      // 호버 갸웃 — 그 사람만
-      rot += Math.sin(t * 5 + s.phase) * HOVER_TILT * s.hov;
-    }
-
-    // 변환이 거의 없으면 패치 생략(원작 그대로면 다시 안 그림)
-    if (Math.abs(rot) < 1e-4 && Math.abs(sx - 1) < 1e-4 && Math.abs(sy - 1) < 1e-4 &&
-        Math.abs(tx) < 0.05 && Math.abs(ty) < 0.05) return;
-
-    // 바운딩박스(패딩 포함) — 이 영역의 원작만 다시 그림
-    const RX = gm.rx * CLIP_OVER, RY = gm.ry * CLIP_OVER;
-    const padX = RX * 0.35 + Math.abs(tx), padY = RY * 0.35 + Math.abs(ty);
-    const bx = gm.cx - RX - padX, by = gm.cy - RY - padY;
-    const bw = (RX + padX) * 2, bh = (RY + padY) * 2;
-    const sImgX = ((bx - r.dx) / r.dw) * IMG_W;
-    const sImgY = ((by - r.dy) / r.dh) * IMG_H;
-    const sImgW = (bw / r.dw) * IMG_W;
-    const sImgH = (bh / r.dh) * IMG_H;
 
     g.save();
-    // 고정된 화면 타원에 clip(구멍은 그대로, 안의 그림만 움직임)
-    g.beginPath();
-    g.ellipse(gm.cx, gm.cy, RX, RY, 0, 0, TAU);
-    g.clip();
-    // 피벗 기준 변환
-    g.translate(pvx + tx, pvy + ty);
+    g.translate(pvx + ox, pvy + oy);
     g.rotate(rot);
     g.scale(sx, sy);
     g.translate(-pvx, -pvy);
-    g.drawImage(this.img, sImgX, sImgY, sImgW, sImgH, bx, by, bw, bh);
+    g.drawImage(this.sp, 0, 0, SP_W, SP_H, s.x, s.y, s.w, s.h);
     g.restore();
+
+    // 충전 게이지 — 발밑에 옅은 힘 막대
+    if (this.charging && this.gauge > 0.02) this._drawGauge(g, pvx, pvy, s, this.gauge);
   }
 
-  // ---- 함성 파문 링 ---------------------------------------------------------
-  _drawRings(g, dt) {
+  _drawGauge(g, pvx, pvy, s, v) {
     const [rr, gg, bb] = this.accentRgb;
+    const w = s.w * 0.7, x = pvx - w / 2, y = pvy + s.h * 0.03, h = Math.max(3, s.h * 0.02);
     g.save();
-    for (const ring of this.rings) {
-      if (ring.life <= 0) continue;
-      ring.r += (this.w + this.h) * 0.35 * dt;
-      ring.life -= dt * 0.9;
-      const a = clamp(ring.life, 0, 1);
-      g.strokeStyle = `rgba(${rr},${gg},${bb},${0.28 * a})`;
-      g.lineWidth = 2 + 4 * a;
-      g.beginPath();
-      g.arc(this._ringCx, this._ringCy, ring.r, 0, TAU);
-      g.stroke();
-    }
+    g.fillStyle = "rgba(42,35,32,0.25)";
+    g.fillRect(x, y, w, h);
+    g.fillStyle = `rgba(${rr},${gg},${bb},${0.55 + 0.35 * v})`;
+    g.fillRect(x, y, w * v, h);
     g.restore();
   }
 
-  // ---- 갓·부채 입자 ---------------------------------------------------------
+  // ---- 관중 밴드 들썩 --------------------------------------------------------
+  _drawBands(g, r) {
+    for (let i = 0; i < 4; i++) {
+      const b = BANDS[i];
+      const age = this.bandT - b[4];
+      if (age <= 0 || age >= BAND_DUR) continue;
+      const off = -this.bandMag[i] * Math.sin((age / BAND_DUR) * Math.PI); // 위로 튕겼다 내림
+      const bx = r.dx + b[0] * r.dw, by = r.dy + b[1] * r.dh;
+      const bw = (b[2] - b[0]) * r.dw, bh = (b[3] - b[1]) * r.dh;
+      g.save();
+      g.beginPath();
+      g.rect(bx, by, bw, bh);
+      g.clip();
+      // 같은 배경판을 off만큼 올려 다시 그림(종이 스트립이 튕기는 느낌)
+      g.drawImage(this.bg, 0, 0, BG_W, BG_H, r.dx, r.dy + off, r.dw, r.dh);
+      g.restore();
+    }
+  }
+
+  // ---- 모래 먼지 -------------------------------------------------------------
   _drawParts(g, dt) {
-    const [rr, gg, bb] = this.accentRgb;
     for (const p of this.parts) {
       if (p.life <= 0) continue;
-      p.vy += 240 * dt;                 // 중력
+      p.vy += 340 * dt;                 // 중력
+      p.vx *= 1 - 1.6 * dt;             // 공기 저항
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.rot += p.spin * dt;
       p.life -= dt / p.max;
       const a = clamp(p.life, 0, 1);
       g.save();
-      g.translate(p.x, p.y);
-      g.rotate(p.rot);
-      g.globalAlpha = a;
-      const sz = 5 + 4 * a;
-      if (p.fan) {
-        // 부채 — 단청빛 쐐기
-        g.fillStyle = `rgba(${rr},${gg},${bb},0.9)`;
-        g.beginPath();
-        g.moveTo(0, 0);
-        g.arc(0, 0, sz * 1.6, -0.5, 0.5);
-        g.closePath();
-        g.fill();
-      } else {
-        // 갓 — 먹빛 챙
-        g.fillStyle = "rgba(30,26,22,0.9)";
-        g.beginPath();
-        g.ellipse(0, 0, sz * 1.4, sz * 0.5, 0, 0, TAU);
-        g.fill();
-        g.fillStyle = "rgba(30,26,22,0.9)";
-        g.beginPath();
-        g.arc(0, -sz * 0.2, sz * 0.6, Math.PI, 0);
-        g.fill();
-      }
+      g.globalAlpha = a * 0.85;
+      g.fillStyle = SAND[p.ci];
+      g.beginPath();
+      g.ellipse(p.x, p.y, p.sz * (1 + (1 - a) * 0.6), p.sz * 0.8, p.rot, 0, TAU);
+      g.fill();
       g.restore();
     }
     g.globalAlpha = 1;
   }
 
-  _heat(g, cx, cy, r, e) {
+  // ---- 함성 파문 링 ----------------------------------------------------------
+  _drawRings(g, dt) {
     const [rr, gg, bb] = this.accentRgb;
-    const R = Math.min(r.dw, r.dh) * 0.5;
-    const rad = g.createRadialGradient(cx, cy, 0, cx, cy, R);
-    rad.addColorStop(0, `rgba(${rr},${gg},${bb},${0.10 * e})`);
-    rad.addColorStop(1, `rgba(${rr},${gg},${bb},0)`);
+    for (const ring of this.rings) {
+      if (ring.life <= 0) continue;
+      ring.r += (this.w + this.h) * 0.34 * dt;
+      ring.life -= dt * 1.1;
+      const a = clamp(ring.life, 0, 1);
+      g.save();
+      g.strokeStyle = `rgba(${rr},${gg},${bb},${0.30 * a * this.roar})`;
+      g.lineWidth = 2 + 4 * a;
+      g.beginPath();
+      g.arc(ring.x, ring.y, ring.r, 0, TAU);
+      g.stroke();
+      g.restore();
+    }
+  }
+
+  // ---- 엿장수 '…' ------------------------------------------------------------
+  _drawYeotDot(g, r) {
+    const a = this._ease(this.yeotDot);
+    const cx = r.dx + ((YEOT_U0 + YEOT_U1) * 0.5) * r.dw;
+    const cy = r.dy + YEOT_V0 * r.dh - r.dh * 0.02 - (1 - this.yeotDot) * r.dh * 0.02;
+    const R = Math.max(3, Math.min(this.w, this.h) * 0.006);
     g.save();
-    g.globalCompositeOperation = "soft-light";
-    g.fillStyle = rad;
+    g.globalAlpha = a;
+    // 작은 말풍선
+    g.fillStyle = "rgba(248,244,232,0.92)";
+    g.strokeStyle = "rgba(42,35,32,0.35)";
+    g.lineWidth = 1;
+    const pw = R * 9, ph = R * 5;
+    this._roundRect(g, cx - pw / 2, cy - ph, pw, ph, R * 1.6);
+    g.fill(); g.stroke();
+    // 꼬리
     g.beginPath();
-    g.arc(cx, cy, R, 0, TAU);
+    g.moveTo(cx - R, cy);
+    g.lineTo(cx + R, cy);
+    g.lineTo(cx, cy + R * 2);
+    g.closePath();
     g.fill();
+    // 세 점
+    g.fillStyle = "rgba(42,35,32,0.8)";
+    for (let i = 0; i < 3; i++) {
+      g.beginPath();
+      g.arc(cx + (i - 1) * R * 2.2, cy - ph / 2, R * 0.7, 0, TAU);
+      g.fill();
+    }
     g.restore();
   }
 
-  // ---- 한지 배경 ------------------------------------------------------------
+  _roundRect(g, x, y, w, h, rad) {
+    g.beginPath();
+    g.moveTo(x + rad, y);
+    g.arcTo(x + w, y, x + w, y + h, rad);
+    g.arcTo(x + w, y + h, x, y + h, rad);
+    g.arcTo(x, y + h, x, y, rad);
+    g.arcTo(x, y, x + w, y, rad);
+    g.closePath();
+  }
+
+  _ease(x) { return x * x * (3 - 2 * x); }
+
+  // ---- 한지 배경 -------------------------------------------------------------
   _paperBg(g, W, H) {
     const bg = g.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, HANJI_TOP);
     bg.addColorStop(1, HANJI_BOT);
     g.fillStyle = bg;
     g.fillRect(0, 0, W, H);
-    // 가장자리 옅은 먹 비네팅
     const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
     vg.addColorStop(0, "rgba(0,0,0,0)");
     vg.addColorStop(1, "rgba(60,48,34,0.16)");
@@ -394,28 +467,27 @@ export default class Ssireum extends Piece {
     g.textAlign = "start"; g.textBaseline = "alphabetic";
   }
 
-  // 하단 한국어 캡션 한 줄
   _caption(g, W, H) {
     g.save();
     g.fillStyle = "rgba(42,35,32,0.72)";
     g.font = `500 ${Math.max(12, Math.min(W, H) * 0.02)}px ui-sans-serif, system-ui, sans-serif`;
     g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.fillText("기술이 터지면 판 전체가 쏠린다 — 엿장수만 빼고.", W / 2, H - Math.max(16, H * 0.03));
+    g.fillText("씨름꾼을 꾹 눌러 힘을 모았다 놓아라 — 들배지기 한 판. 엿장수만 빼고.", W / 2, H - Math.max(16, H * 0.03));
     g.restore();
   }
 
   controls(host) {
-    host.appendChild(slider("숨결 (breath)", 0, 2, this.breath, 0.05, (v) => (this.breath = v)));
+    host.appendChild(slider("힘 (force)", 0.3, 1.8, this.force, 0.05, (v) => (this.force = v)));
     host.appendChild(slider("함성 (roar)", 0.2, 2, this.roar, 0.05, (v) => (this.roar = v)));
     host.appendChild(buttonRow([
-      { label: "기술! (들배지기)", on: () => { if (this.ready) this._technique(this._fit()); } },
+      { label: "한 판 붙자!", on: () => { if (this.ready) this._trigger(0.9); } },
     ]));
   }
 
   teardown() {
-    this.img = null;
+    this.bg = null;
+    this.sp = null;
     this.parts = null;
     this.rings = null;
-    this.fig = null;
   }
 }

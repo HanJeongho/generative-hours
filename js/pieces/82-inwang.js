@@ -41,12 +41,12 @@ const REC_BASE = 0.24;                 // 기본 회복 속도(MIST 슬라이더
 
 // ── 브러시(문지르기) / 소나기 ───────────────────────────────────────────────
 const CELL = 9;                        // 밀도장 격자 한 칸(스크린 px 목표)
-const BRUSH_STRENGTH = 3.4;            // 초당 안개 깎는 세기
+const BRUSH_STRENGTH = 5.2;            // 초당 안개 깎는 세기
 const PUSH_FRAC = 0.45;                // 밀려난 안개가 앞쪽에 쌓이는 비율
 const RAIN_MAX = 260;                  // 먹비 입자 풀 크기
 const RAIN_BURST = 96;                 // 클릭 한 줄기당 입자 수
 const NSCALE = 0.0055;                 // 노이즈 공간 스케일(해상도 독립)
-const DRIFTX = 0.028, DRIFTY = -0.016; // 안개 이류 방향(느리게 위로)
+const DRIFTX = 0.055, DRIFTY = -0.014; // 안개 이류(옆에서 흘러드는 감각)
 
 export default class Inwang extends Piece {
   setup() {
@@ -193,7 +193,7 @@ export default class Inwang extends Piece {
 
   // ── 문지르기: 브러시 반경 안 밀도 깎기 + 속도 방향 앞쪽에 쌓기 ─────────────
   _wipe(dts) {
-    const R = Math.min(this.w, this.h) * 0.11;      // 브러시 반경(스크린 px)
+    const R = Math.min(this.w, this.h) * 0.26;      // 브러시 반경(스크린 px) — 크게 걷힘
     const gcx = this.pointer.x / this.cw, gcy = this.pointer.y / this.ch;
     const rcx = R / this.cw, rcy = R / this.ch;
     const vx = this.pointer.vx, vy = this.pointer.vy;
@@ -242,9 +242,14 @@ export default class Inwang extends Piece {
         const billow = n1 * 0.62 + n2 * 0.38;
         let target = MIST_BASE + billow * MIST_VAR + vw * VALLEY_LIFT + this.mistBoost;
         if (target > 1.18) target = 1.18;
-        // 아래칸이 짙으면 위로 차오름(창발) — 골짜기에서 스며 오르는 안개
-        let rate = rowRate;
-        if (below >= 0) rate += this.mist * REC_RISE * d[below + gx];
+        // 회복은 '그 자리'가 아니라 양옆에서 구름처럼 스며든다:
+        // 이웃(좌우) 칸의 밀도가 있어야 나도 차오른다 — 걷힌 구멍은
+        // 가장자리부터 안쪽으로 서서히 메워진다. 화면 양끝은 상시 발원.
+        const left = gx > 0 ? d[i - 1] : 1;
+        const rite = gx < GW - 1 ? d[i + 1] : 1;
+        const nb = Math.max(left, rite);
+        let rate = rowRate * (0.06 + nb * 1.6);
+        if (below >= 0) rate += this.mist * REC_RISE * 0.35 * d[below + gx];
         let v = d[i] + (target - d[i]) * (rate * dts > 1 ? 1 : rate * dts);
         if (v < 0) v = 0;
         d[i] = v;

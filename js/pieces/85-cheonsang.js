@@ -139,7 +139,7 @@ export default class Cheonsang extends Piece {
     this._lstT = 0;
 
     // 스프라이트(발광점) — 프레임 무할당 blit용
-    this._goldSprite = this._mkGlow(["#fff0c8", "#f2c063", "#e0a03a"]);
+    this._goldSprite = this._mkGlow(["#fff0c8", "#f2c063", "#e0a03a"], true);
     this._moonSprite = this._mkGlow(["#eaf2ff", "#a8c4ee", "#5f7bb0"]);
 
     this._grain = this._mkGrain(150);
@@ -156,19 +156,32 @@ export default class Cheonsang extends Piece {
   }
 
   // ---- 발광 스프라이트(방사 그라데이션 1회 베이크) ---------------------------
-  _mkGlow(stops) {
+  _mkGlow(stops, soft) {
     const s = 64, cv = document.createElement("canvas");
     cv.width = s; cv.height = s;
     const g = cv.getContext("2d");
     const grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
     grd.addColorStop(0, "rgba(255,255,255,1)");
-    grd.addColorStop(0.18, stops[0]);
-    grd.addColorStop(0.45, stops[1]);
+    // soft: 더 크고 부드러운 헤일로(금빛 별용)
+    grd.addColorStop(soft ? 0.12 : 0.18, stops[0]);
+    grd.addColorStop(soft ? 0.36 : 0.45, stops[1]);
+    if (soft) grd.addColorStop(0.72, stops[2]);
     grd.addColorStop(1, "rgba(0,0,0,0)");
     // 중앙 흰 코어를 위해 알파는 gco로 처리; 색만 지정
     g.fillStyle = grd;
     g.fillRect(0, 0, s, s);
     return cv;
+  }
+
+  // ---- 둥근 사각(명패용) --------------------------------------------------
+  _roundRect(g, x, y, w, h, r) {
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
   }
 
   // ---- 화강암 미세 노이즈 타일 ----------------------------------------------
@@ -218,32 +231,46 @@ export default class Cheonsang extends Piece {
     const S = Math.min(W, H) / 720;
     const cx = this._cx, cy = this._cy, R = this._R;
 
-    // 1) 화강암 바탕
-    const bg = g.createRadialGradient(cx, cy, R * 0.1, cx, cy, Math.max(W, H) * 0.8);
-    bg.addColorStop(0, "#181c24");
-    bg.addColorStop(0.6, "#101319");
-    bg.addColorStop(1, "#070a0e");
+    // 1) 검은 각석 바탕 — 더 깊은 명암
+    const bg = g.createRadialGradient(cx, cy, R * 0.05, cx, cy, Math.max(W, H) * 0.85);
+    bg.addColorStop(0, "#1b212b");
+    bg.addColorStop(0.55, "#0f131a");
+    bg.addColorStop(1, "#05070a");
     g.fillStyle = bg;
     g.fillRect(0, 0, W, H);
 
-    // 미세 노이즈(오버레이 저알파)
+    // 상단좌측에서 비껴드는 은은한 박물관 조명(라디얼)
+    const lx = cx - R * 0.55, ly = cy - R * 0.62;
     g.save();
-    g.globalAlpha = 0.06;
+    g.globalCompositeOperation = "lighter";
+    const lit = g.createRadialGradient(lx, ly, R * 0.05, lx, ly, R * 1.7);
+    lit.addColorStop(0, "rgba(150,166,196,0.20)");
+    lit.addColorStop(0.4, "rgba(96,108,132,0.09)");
+    lit.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = lit;
+    g.fillRect(0, 0, W, H);
+    g.restore();
+
+    // 미세 노이즈(오버레이) — 돌 입자를 조금 더 또렷하게
+    g.save();
+    g.globalAlpha = 0.10;
     g.globalCompositeOperation = "overlay";
     const gp = g.createPattern(this._grain, "repeat");
     g.fillStyle = gp;
     g.fillRect(0, 0, W, H);
     g.restore();
 
-    // 2) 정질 긁힘(결정적)
+    // 2) 정질 긁힘(결정적) — 조금 더 또렷하게
     const rng = this._mkRng(0x9e3779b1);
     g.save();
     g.lineCap = "round";
-    for (let i = 0; i < 46; i++) {
+    for (let i = 0; i < 64; i++) {
       const x = rng() * W, y = rng() * H;
-      const a = rng() * TAU, len = 20 + rng() * 120;
-      g.strokeStyle = `rgba(${rng() > 0.5 ? "255,255,255" : "0,0,0"},${0.015 + rng() * 0.03})`;
-      g.lineWidth = 0.4 + rng() * 0.7;
+      const a = rng() * TAU, len = 18 + rng() * 140;
+      g.strokeStyle = rng() > 0.5
+        ? `rgba(200,210,228,${0.018 + rng() * 0.045})`
+        : `rgba(0,0,0,${0.02 + rng() * 0.05})`;
+      g.lineWidth = 0.35 + rng() * 0.8;
       g.beginPath();
       g.moveTo(x, y);
       g.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len);
@@ -251,10 +278,20 @@ export default class Cheonsang extends Piece {
     }
     g.restore();
 
+    // 2b) 돌 자체의 깊은 비네트(입체감) — 조명 반대쪽이 더 어둡게, 베이크에 한 번
+    g.save();
+    const bvg = g.createRadialGradient(lx, ly, R * 0.4, cx, cy, Math.max(W, H) * 0.92);
+    bvg.addColorStop(0, "rgba(0,0,0,0)");
+    bvg.addColorStop(0.7, "rgba(0,0,0,0.12)");
+    bvg.addColorStop(1, "rgba(0,0,0,0.5)");
+    g.fillStyle = bvg;
+    g.fillRect(0, 0, W, H);
+    g.restore();
+
     // 3) 28수 방사 구획선(희미)
     g.save();
-    g.strokeStyle = "rgba(140,150,170,0.10)";
-    g.lineWidth = 0.7;
+    g.strokeStyle = "rgba(150,162,186,0.05)";
+    g.lineWidth = 0.5;
     const rInner = R * 0.16;
     for (let i = 0; i < LUNAR_MANSIONS; i++) {
       const a = (i / LUNAR_MANSIONS) * TAU + STONE_ROT;
@@ -274,8 +311,9 @@ export default class Cheonsang extends Piece {
     for (let i = 0; i < BRIGHT.length; i++) {
       const s = BRIGHT[i];
       const p = this._project(s.ra, s.dec, STONE_ROT, this.stone[i]);
-      p.r = this._mag2r(s.m, S);
-      if (p.vis) this._engrave(g, p.x, p.y, p.r);
+      const bright = s.m <= 2.0;                       // 1~2등급: 홈 키우고 금박 흔적
+      p.r = this._mag2r(s.m, S) * (bright ? 1.18 : 1);
+      if (p.vis) this._engrave(g, p.x, p.y, p.r, bright);
     }
     // 절차적 새김별
     for (let i = 0; i < this.filler.length; i++) {
@@ -285,6 +323,25 @@ export default class Cheonsang extends Piece {
       const x = cx + Math.cos(a) * rr, y = cy + Math.sin(a) * rr;
       this._engrave(g, x, y, this._mag2r(f.m, S) * 0.85);
     }
+
+    // 5b) 대표 별자리 상시 연결선(원본 천문도가 새긴 별자리 획) — 아주 옅은 음각
+    g.save();
+    g.lineCap = "round";
+    for (let c = 0; c < CONSTELLATIONS.length; c++) {
+      const con = CONSTELLATIONS[c];
+      for (let l = 0; l < con.lines.length; l++) {
+        const p = this.stone[this.gid[con.stars[con.lines[l][0]]]];
+        const q = this.stone[this.gid[con.stars[con.lines[l][1]]]];
+        if (!p.vis || !q.vis) continue;
+        g.strokeStyle = "rgba(0,0,0,0.38)";           // 홈 그늘
+        g.lineWidth = 1.0;
+        g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(q.x, q.y); g.stroke();
+        g.strokeStyle = "rgba(180,190,208,0.08)";     // 빛 받는 가는 하이라이트
+        g.lineWidth = 0.5;
+        g.beginPath(); g.moveTo(p.x + 0.4, p.y + 0.5); g.lineTo(q.x + 0.4, q.y + 0.5); g.stroke();
+      }
+    }
+    g.restore();
 
     // 중심 표식(북극 근방 작은 홈)
     this._engrave(g, cx, cy, 1.4 * S);
@@ -298,37 +355,51 @@ export default class Cheonsang extends Piece {
   _engraveCircle(g, cx, cy, r, strength, doubled) {
     if (r <= 1) return;
     g.save();
-    g.lineWidth = doubled ? 2.2 : 1.4;
-    g.strokeStyle = `rgba(0,0,0,${0.35 + strength})`;
+    // 바깥 굵은 홈(음각)
+    g.lineWidth = doubled ? 2.6 : 1.4;
+    g.strokeStyle = `rgba(0,0,0,${0.4 + strength})`;
     g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.stroke();
-    g.lineWidth = 0.8;
-    g.strokeStyle = `rgba(180,188,205,${0.10 + strength})`;
-    g.beginPath(); g.arc(cx + 0.6, cy + 0.8, r, 0.1 * TAU, 0.45 * TAU); g.stroke();
+    // 음각 하이라이트(빛 받는 우하 벽)
+    g.lineWidth = doubled ? 1.1 : 0.8;
+    g.strokeStyle = `rgba(190,198,216,${0.12 + strength})`;
+    g.beginPath(); g.arc(cx + 0.7, cy + 0.9, r, 0.08 * TAU, 0.46 * TAU); g.stroke();
     if (doubled) {
+      // 안쪽 가는 새김선 + 그 하이라이트(이중 새김)
       g.lineWidth = 1.0;
-      g.strokeStyle = "rgba(90,98,112,0.18)";
-      g.beginPath(); g.arc(cx, cy, r * 0.985, 0, TAU); g.stroke();
+      g.strokeStyle = `rgba(0,0,0,${0.26 + strength})`;
+      g.beginPath(); g.arc(cx, cy, r * 0.955, 0, TAU); g.stroke();
+      g.lineWidth = 0.6;
+      g.strokeStyle = "rgba(172,182,202,0.13)";
+      g.beginPath(); g.arc(cx + 0.5, cy + 0.6, r * 0.955, 0.08 * TAU, 0.46 * TAU); g.stroke();
     }
     g.restore();
   }
 
   // 음각 점(새김눈): 홈 + 좌상단 그림자 + 우하단 광택
-  _engrave(g, x, y, r) {
-    // 그림자(좌상단으로 살짝)
+  _engrave(g, x, y, r, gold) {
+    // 좌상단 그림자(파인 홈의 그늘)
     g.beginPath();
-    g.arc(x - r * 0.28, y - r * 0.28, r * 1.15, 0, TAU);
-    g.fillStyle = "rgba(0,0,0,0.42)";
+    g.arc(x - r * 0.26, y - r * 0.26, r * 1.18, 0, TAU);
+    g.fillStyle = "rgba(0,0,0,0.5)";
     g.fill();
-    // 홈(어두운 방사)
-    const grd = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.1, x, y, r);
-    grd.addColorStop(0, "rgba(0,0,0,0.9)");
-    grd.addColorStop(1, "rgba(28,32,40,0)");
+    // 어두운 홈(더 또렷하게)
+    const grd = g.createRadialGradient(x - r * 0.3, y - r * 0.3, r * 0.08, x, y, r);
+    grd.addColorStop(0, "rgba(0,0,0,0.95)");
+    grd.addColorStop(0.7, "rgba(0,0,0,0.6)");
+    grd.addColorStop(1, "rgba(26,30,38,0)");
     g.fillStyle = grd;
     g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
-    // 우하단 하이라이트(빛 받는 안쪽 벽)
-    g.strokeStyle = "rgba(200,206,220,0.55)";
-    g.lineWidth = Math.max(0.5, r * 0.28);
-    g.beginPath(); g.arc(x + 0.2, y + 0.2, r * 0.82, 0.05 * TAU, 0.38 * TAU); g.stroke();
+    // 아래쪽 미세 하이라이트(빛 받는 안쪽 벽)
+    g.strokeStyle = "rgba(206,212,226,0.6)";
+    g.lineWidth = Math.max(0.5, r * 0.3);
+    g.beginPath(); g.arc(x + 0.2, y + 0.25, r * 0.8, 0.06 * TAU, 0.4 * TAU); g.stroke();
+    // 밝은 별: 아주 옅은 금박 흔적
+    if (gold) {
+      g.beginPath();
+      g.arc(x + r * 0.12, y + r * 0.16, r * 0.5, 0, TAU);
+      g.fillStyle = "rgba(214,176,96,0.16)";
+      g.fill();
+    }
   }
 
   // ---- 발광점 blit(무할당) ---------------------------------------------------
@@ -353,7 +424,7 @@ export default class Cheonsang extends Piece {
     // 겹침 이징
     const target = this.pointer.down ? 1 : 0;
     this.reveal = target > this.reveal
-      ? Math.min(1, this.reveal + dt * 2.4)
+      ? Math.min(1, this.reveal + dt * 1.7)   // 등장 ~0.6s 페이드
       : Math.max(0, this.reveal - dt * 1.3);
 
     // 배경(각석) blit — 디바이스 픽셀 1:1
@@ -420,14 +491,28 @@ export default class Cheonsang extends Piece {
         mx += p.x; my += p.y;
       }
       mx /= con.stars.length; my /= con.stars.length;
-      // 이름표
+      // 이름표 — 한지 톤 작은 명패
       g.globalCompositeOperation = "source-over";
-      g.globalAlpha = a;
-      g.fillStyle = this.accent;
-      g.font = `600 ${12 * Math.max(1, S)}px ui-sans-serif, system-ui, sans-serif`;
+      const SS = Math.max(1, S);
+      const fs = 12 * SS;
+      g.font = `600 ${fs}px ui-sans-serif, system-ui, sans-serif`;
       g.textAlign = "center";
-      g.fillText(con.name, mx, my - (this.stone[this.gid[con.stars[0]]].r + 14) * Math.max(1, S));
+      g.textBaseline = "middle";
+      const ly = my - (this.stone[this.gid[con.stars[0]]].r + 20) * SS;
+      const tw = g.measureText(con.name).width;
+      const padX = 9 * SS, padY = 5 * SS;
+      const bw = tw + padX * 2, bh = fs + padY * 2;
+      g.globalAlpha = a;
+      this._roundRect(g, mx - bw / 2, ly - bh / 2, bw, bh, 4 * SS);
+      g.fillStyle = "rgba(232,224,201,0.92)";        // 한지 바탕
+      g.fill();
+      g.lineWidth = 1;
+      g.strokeStyle = "rgba(60,52,40,0.35)";         // 옅은 먹선 테두리
+      g.stroke();
+      g.fillStyle = "rgba(40,34,28,0.94)";           // 먹 글씨
+      g.fillText(con.name, mx, ly + 0.5 * SS);
       g.globalAlpha = 1;
+      g.textBaseline = "alphabetic";
     }
     g.textAlign = "start";
     g.restore();
@@ -436,28 +521,30 @@ export default class Cheonsang extends Piece {
   // 오늘 하늘: 항성시 회전 + 세차 오프셋으로 겹쳐 그린 금빛 별
   _drawToday(g, t) {
     const S = this._S || 1;
-    const goldRot = STONE_ROT + (this._lstDeg / 360) * TAU + PRECESS_RAD;
+    const rev = this.reveal;
+    const ease = rev * rev * (3 - 2 * rev);           // smoothstep 페이드
+    const alignRot = (1 - ease) * 0.14;               // 등장 시 살짝 돌아 정렬
+    const goldRot = STONE_ROT + (this._lstDeg / 360) * TAU + PRECESS_RAD + alignRot;
     // 위치 갱신(무할당)
     for (let i = 0; i < BRIGHT.length; i++) {
       const s = BRIGHT[i];
       const p = this._project(s.ra, s.dec, goldRot, this.gold[i]);
       p.r = this._mag2r(s.m, S);
     }
-    const rev = this.reveal;
     const shimmer = 0.85 + 0.15 * Math.sin(t * 2.2);
 
     g.save();
     g.globalCompositeOperation = "lighter";
-    // 별
+    // 별 — 더 크고 부드러운 금빛 글로우
     for (let i = 0; i < BRIGHT.length; i++) {
       const p = this.gold[i];
       if (!p.vis) continue;
       const tw = 0.9 + 0.1 * Math.sin(t * 3 + i * 1.7);
-      this._blitGlow(g, this._goldSprite, p.x, p.y, (p.r + 4) * 2.2, rev * shimmer * tw);
+      this._blitGlow(g, this._goldSprite, p.x, p.y, (p.r + 6) * 2.9, ease * shimmer * tw);
     }
     // 대표 별자리 금빛 선(어긋남을 드러냄)
-    g.strokeStyle = `rgba(245,200,110,${0.28 * rev})`;
-    g.lineWidth = 1.0;
+    g.strokeStyle = `rgba(245,205,120,${0.3 * ease})`;
+    g.lineWidth = 1.2;
     for (let c = 0; c < CONSTELLATIONS.length; c++) {
       const con = CONSTELLATIONS[c];
       for (let l = 0; l < con.lines.length; l++) {
@@ -474,7 +561,7 @@ export default class Cheonsang extends Piece {
   _drawVignette(g, W, H) {
     const vg = g.createRadialGradient(W / 2, this._cy, this._R * 0.7, W / 2, this._cy, Math.max(W, H) * 0.75);
     vg.addColorStop(0, "rgba(0,0,0,0)");
-    vg.addColorStop(1, "rgba(0,0,0,0.5)");
+    vg.addColorStop(1, "rgba(0,0,0,0.38)");
     g.fillStyle = vg;
     g.fillRect(0, 0, W, H);
   }
