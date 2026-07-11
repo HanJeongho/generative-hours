@@ -458,9 +458,9 @@ export default class Irworobongdo extends Piece {
     g.save();
     g.globalAlpha = 0.7;
     g.fillStyle = "rgba(240,232,214,0.92)";
-    g.font = `500 ${Math.max(11, Math.min(W, H) * 0.020)}px ui-sans-serif, system-ui, sans-serif`;
-    g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.fillText(CAPTION, W / 2, H - Math.max(14, H * 0.035));
+    g.font = `500 ${Math.max(11, Math.min(W, H) * 0.017)}px ui-sans-serif, system-ui, sans-serif`;
+    g.textAlign = "center"; g.textBaseline = "bottom";
+    g.fillText(CAPTION, W / 2, H - 10);
     g.restore();
   }
 

@@ -158,9 +158,9 @@ export default class Inwang extends Piece {
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
 
     g.fillStyle = "rgba(28,24,18,0.82)";
-    g.font = `500 ${Math.max(12, Math.min(W, H) * 0.02)}px ui-sans-serif, system-ui, sans-serif`;
-    g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.fillText("비는 방금 그쳤다 — 걷히는 것은 당신의 손이 한다.", W * 0.5, H - Math.max(16, H * 0.035));
+    g.font = `500 ${Math.max(11, Math.min(W, H) * 0.017)}px ui-sans-serif, system-ui, sans-serif`;
+    g.textAlign = "center"; g.textBaseline = "bottom";
+    g.fillText("비는 방금 그쳤다 — 걷히는 것은 당신의 손이 한다.", W * 0.5, H - 10);
     g.textAlign = "start";
 
     if (!this.ready) {

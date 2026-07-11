@@ -467,14 +467,7 @@ export default class Ssireum extends Piece {
     g.textAlign = "start"; g.textBaseline = "alphabetic";
   }
 
-  _caption(g, W, H) {
-    g.save();
-    g.fillStyle = "rgba(42,35,32,0.72)";
-    g.font = `500 ${Math.max(12, Math.min(W, H) * 0.02)}px ui-sans-serif, system-ui, sans-serif`;
-    g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.fillText("씨름꾼을 꾹 눌러 힘을 모았다 놓아라 — 들배지기 한 판. 엿장수만 빼고.", W / 2, H - Math.max(16, H * 0.03));
-    g.restore();
-  }
+  _caption() {}   // 설명 캡션 제거 — 판 자체가 말한다 (안내는 플래카드/힌트바)
 
   controls(host) {
     host.appendChild(slider("힘 (force)", 0.3, 1.8, this.force, 0.05, (v) => (this.force = v)));

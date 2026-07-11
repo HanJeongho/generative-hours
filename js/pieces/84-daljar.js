@@ -364,6 +364,7 @@ export default class MoonJar extends ThreePiece {
         // 손 y → 높이 행 / |x−화면중앙| → 그 행의 목표 반경(모을수록 좁고 벌릴수록 넓게)
         if (this._nHands > 0) {
           this.idle = 0;
+          this._touched = true;                       // 첫 빚기 후 안내 캡션 소등
           const N = this.profile.length;
           for (let i = 0; i < 2; i++) {
             const hnd = this._hands[i];
@@ -382,6 +383,7 @@ export default class MoonJar extends ThreePiece {
         if (this.pointer.down) this.idle = 0; else this.idle += dt;
 
         if (this.pointer.down && moving && this.pointer.active) {
+          this._touched = true;                       // 첫 빚기 후 안내 캡션 소등
           const fy = clamp((this.pointer.y / this.h - SCREEN_TOP) / (SCREEN_BOT - SCREEN_TOP), 0, 1);
           const band = (1 - fy) * (this.profile.length - 1);   // 세로 위치 → 높이 밴드
           const d = this.pointer.vx * SHAPE_GAIN;               // 가로 드래그 → 반경 증감
@@ -447,8 +449,8 @@ export default class MoonJar extends ThreePiece {
       }
     }
 
-    // ── 캡션: 빚는 동안은 안내, 완성되면 시상(詩想) ────────────────────────
-    this.cap.set(this.phase === "moon" ? CAP_POEM : this._capMsg);
+    // ── 캡션: 완성되면 시상(詩想), 빚기 안내는 손대기 전까지만 ─────────────
+    this.cap.set(this.phase === "moon" ? CAP_POEM : (this._touched ? "" : this._capMsg));
 
     // ── 물레/자전: 빚을 땐 물레 속도, 식으면 느린 달의 자전 ───────────────
     let spin;

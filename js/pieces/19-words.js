@@ -70,8 +70,9 @@ export default class WordsUnbound extends Piece {
     inp.placeholder = "type letters…";
     inp.setAttribute("aria-label", "type letters to drop");
     Object.assign(inp.style, {
-      position: "absolute", left: "50%", bottom: "16px", transform: "translateX(-50%)",
-      width: "min(60%, 320px)", padding: "8px 12px", zIndex: "5",
+      // TOP-centre: 하단 중앙 힌트바(.actionbar, bottom 20–40px)와 겹치지 않게 (29·30과 동일)
+      position: "absolute", left: "50%", top: "16px", transform: "translateX(-50%)",
+      width: "min(60%, 320px)", padding: "8px 12px", zIndex: "11",
       background: "rgba(10,8,12,0.55)", color: this.accent,
       border: "1px solid rgba(255,255,255,0.12)", borderRadius: "999px",
       font: "13px/1 ui-monospace, monospace", letterSpacing: "0.08em",

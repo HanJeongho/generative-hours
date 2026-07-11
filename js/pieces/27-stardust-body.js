@@ -509,7 +509,7 @@ export default class Precognition extends VisionPiece {
     g.textAlign = "center";
     g.fillStyle = `rgba(${WING},${0.5 + 0.15 * Math.sin(t * 1.5)})`;
     g.font = "14px Inter, system-ui, sans-serif";
-    g.fillText("손을 들어 허공의 화면을 잡으세요  ·  꼬집어 잡고, 두 손으로 펼치고, 휙 던지세요",
+    g.fillText("손을 들어 허공의 화면을 잡아 보세요",
       this.w / 2, this.h * 0.5);
     g.restore();
   }
@@ -522,7 +522,7 @@ export default class Precognition extends VisionPiece {
     this._drawBg(t);
     g.globalCompositeOperation = "lighter";
     for (const p of this.panels) this._drawPanel(g, p, t);
-    this._hint(t);
+    if (!this.pointer.active) this._hint(t);
   }
 
   controls(host) {

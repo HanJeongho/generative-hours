@@ -106,7 +106,6 @@ const CONSTELLATIONS = [
     desc: "북두의 자루 곡선을 따라 미끄러져 내려오면 만나는 주황빛 아르크투루스. 동양에서는 하늘의 큰 뿔, 대각(大角)이라 불렀다." },
 ];
 
-const CAPTION = "별자리 가까이 손을 대면, 새겨진 별이 달빛으로 깨어난다.";
 
 export default class Cheonsang extends Piece {
   setup() {
@@ -423,9 +422,8 @@ export default class Cheonsang extends Piece {
     this._drawConstellations(g);
     this._drawPanel(g);
 
-    // 비네팅 + 캡션
+    // 비네팅 (설명 캡션 없음 — 돌은 침묵한다)
     this._drawVignette(g, W, H);
-    this._drawCaption(g, W, H);
   }
 
   // 포인터 근접으로 별자리 강도 목표 설정 후 이징
@@ -550,17 +548,6 @@ export default class Cheonsang extends Piece {
     vg.addColorStop(1, "rgba(0,0,0,0.38)");
     g.fillStyle = vg;
     g.fillRect(0, 0, W, H);
-  }
-
-  _drawCaption(g, W, H) {
-    g.save();
-    g.font = `500 ${Math.max(12, Math.min(W, H) * 0.02)}px ui-sans-serif, system-ui, sans-serif`;
-    g.textAlign = "center";
-    g.textBaseline = "alphabetic";
-    g.fillStyle = "rgba(224,230,240,0.62)";
-    g.fillText(CAPTION, W / 2, H - Math.max(20, H * 0.045));
-    g.textAlign = "start";
-    g.restore();
   }
 
   teardown() {

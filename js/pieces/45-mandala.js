@@ -344,9 +344,9 @@ export default class SandMandala extends Piece {
     g.fillStyle = "rgba(200,192,178,0.55)";
     const mm = String(d.getMinutes()).padStart(2, "0");
     g.fillText(
-      this.wind > 0 ? "바람이 한 시간의 작업을 쓸어갑니다 — 무상(無常)"
-        : `${d.getHours()}시의 만다라 · ${mm}번째 꽃잎이 쌓이는 중 — 정시가 되면 바람이 전부 쓸어갑니다`,
-      W / 2, H - 14);
+      this.wind > 0 ? "무상(無常) — 바람이 쓸어간다"
+        : `${d.getHours()}시의 만다라 · ${mm}번째 꽃잎`,
+      W / 2, H - 10);
 
     // vignette
     const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.42, W / 2, H / 2, Math.max(W, H) * 0.75);

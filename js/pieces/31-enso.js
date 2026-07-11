@@ -358,7 +358,7 @@ export default class Enso extends VisionPiece {
     this._composite(g);
     this._drawEmbers(g, dt, t);                    // embers over everything
     if (lm) this._brushTip(g);
-    this._hint(g);
+    if (!lm && !this.pointer.active) this._hint(g);   // 유휴 시에만 안내
   }
 
   // a faint reticle at the live brush tip so the visitor sees where ink lands
@@ -388,8 +388,8 @@ export default class Enso extends VisionPiece {
     g.textAlign = "center";
     g.fillStyle = "rgba(255,180,150,0.45)";
     g.font = "12px ui-monospace, monospace";
-    g.fillText("손을 펴면 먹이 흐르고, 꼬집으면 붓을 든다  ·  OPEN = ink, PINCH = lift",
-      this.w / 2, this.h - 22);
+    g.fillText("손을 펴면 먹이 흐르고, 꼬집으면 붓이 들린다",
+      this.w / 2, this.h - 10);
     g.restore();
   }
 

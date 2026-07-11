@@ -29,14 +29,14 @@ const IMG_W = 1400, IMG_H = 1200;         // 원본 픽셀 크기 (신윤복 〈
 
 // ── 이미지 비율(0..1) 좌표 — 시각 캘리브레이션용 상수(중앙에서 조정 가능) ──────
 const LANTERN = { u: 0.865, v: 0.655, r: 0.035 };   // 초롱불 위치·몸통 반경
-const CHEEK_W = { u: 0.695, v: 0.445 };             // 여인 볼
-const CHEEK_M = { u: 0.855, v: 0.335 };             // 남자 볼
+const CHEEK_W = { u: 0.690, v: 0.455 };             // 여인 볼 (마커 검증으로 보정)
+const CHEEK_M = { u: 0.852, v: 0.362 };             // 남자 볼 (마커 검증으로 보정)
 const MOON    = { u: 0.27,  v: 0.21 };              // 초승달
 
 // ── 타이밍 ───────────────────────────────────────────────────────────────────
 const RISE_SEC = 2.5;                     // 꾹 누름 → 완전 점등까지
 const FALL_SEC = 3.0;                     // 손 놓음 → 완전 소등까지
-const BLUSH_ONSET = 0.55;                 // warmth 이 지점부터 홍조가 번지기 시작
+const BLUSH_ONSET = 0.45;                 // warmth 이 지점부터 홍조가 스윽 번지기 시작
 
 // ── 밤 그레이딩(곱하기) — 은은한 청묵 ────────────────────────────────────────
 const NIGHT = [176, 187, 214];            // multiply 색(≈0.72 어둡힘, 살짝 푸르게)
@@ -156,8 +156,6 @@ export default class Wolha extends Piece {
     g.fillStyle = vg;
     g.fillRect(0, 0, W, H);
 
-    this._caption(g, W, H);
-
     if (!this.ready) {
       g.fillStyle = "rgba(250,246,236,0.9)";
       g.font = `600 ${Math.max(13, Math.min(W, H) * 0.026)}px ui-sans-serif, system-ui, sans-serif`;
@@ -167,28 +165,17 @@ export default class Wolha extends Piece {
     }
   }
 
-  // ── 볼 홍조: 작은 장미빛 가산 라디얼(은은히) ─────────────────────────────────
+  // ── 볼 홍조: 장미빛 가산 라디얼 — 또렷하되 부드럽게 스윽 ─────────────────────
   _blush(g, x, y, r, a) {
     const bg = g.createRadialGradient(x, y, 0, x, y, r);
-    bg.addColorStop(0, `rgba(255,138,132,${0.28 * a})`);
-    bg.addColorStop(0.6, `rgba(240,110,110,${0.12 * a})`);
-    bg.addColorStop(1, "rgba(230,100,100,0)");
+    bg.addColorStop(0, `rgba(255,120,116,${0.55 * a})`);
+    bg.addColorStop(0.55, `rgba(244,100,104,${0.26 * a})`);
+    bg.addColorStop(1, "rgba(230,90,96,0)");
     g.fillStyle = bg;
     g.fillRect(x - r, y - r, r * 2, r * 2);
   }
 
-  // ── 하단 화제 + 꾹 누르기 안내 ──────────────────────────────────────────────
-  _caption(g, W, H) {
-    g.textAlign = "center"; g.textBaseline = "alphabetic";
-    const base = H - Math.max(30, H * 0.06);
-    g.fillStyle = "rgba(236,232,224,0.82)";
-    g.font = `500 ${Math.max(12, Math.min(W, H) * 0.02)}px ui-sans-serif, system-ui, sans-serif`;
-    g.fillText("月沈沈夜三更 兩人心事兩人知 — 달은 깊어 삼경인데, 두 사람 마음은 둘만이 안다.", W * 0.5, base);
-    g.fillStyle = "rgba(255,196,120,0.7)";
-    g.font = `500 ${Math.max(11, Math.min(W, H) * 0.017)}px ui-sans-serif, system-ui, sans-serif`;
-    g.fillText("화면을 꾹 누르고 있으면 초롱불이 서서히 켜집니다.", W * 0.5, base + Math.max(18, H * 0.032));
-    g.textAlign = "start";
-  }
+  // 캡션 없음 — 화제(月沈沈…)는 원작 화면 안에 이미 쓰여 있다. 안내는 힌트바가 한다.
 
   // ── 폴백: 원작 로드 전/실패 시 절차적 밤(인터랙션 유지) ──────────────────────
   _drawFallback(g, t) {

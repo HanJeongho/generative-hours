@@ -187,11 +187,11 @@ export default class Sehando extends Piece {
     g.fillStyle = vg; g.fillRect(0, 0, W, H);
 
     g.fillStyle = `rgba(${30 + this.evening * 120},${26 + this.evening * 120},${20 + this.evening * 130},0.82)`;
-    g.font = `500 ${Math.max(12, Math.min(W, H) * 0.019)}px ui-sans-serif, system-ui, sans-serif`;
-    g.textAlign = "center"; g.textBaseline = "alphabetic";
-    g.fillText("날이 차가워진 뒤에야, 소나무가 늦게 시듦을 안다 — 歲寒然後知松柏.",
-      W * 0.5, H - Math.max(16, H * 0.035));
-    g.textAlign = "start";
+    g.font = `500 ${Math.max(11, Math.min(W, H) * 0.017)}px ui-sans-serif, system-ui, sans-serif`;
+    g.textAlign = "center"; g.textBaseline = "bottom";
+    g.fillText("歲寒然後知松柏 — 날이 차가워진 뒤에야, 소나무가 늦게 시듦을 안다.",
+      W * 0.5, H - 10);
+    g.textAlign = "start"; g.textBaseline = "alphabetic";
 
     if (!this.ready) {
       g.fillStyle = "rgba(40,34,24,0.9)";
