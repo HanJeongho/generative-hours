@@ -329,7 +329,7 @@ export default class Ssireum extends Piece {
     g.restore();
 
     // 충전 게이지 — 발밑에 옅은 힘 막대
-    if (this.charging && this.gauge > 0.02) this._drawGauge(g, pvx, pvy, s, this.gauge);
+    // (게이지 시각 표시 없음 — 떨림·웅크림이 곧 게이지)
   }
 
   _drawGauge(g, pvx, pvy, s, v) {
