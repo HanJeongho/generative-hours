@@ -205,17 +205,10 @@ export default class AirPaint extends VisionPiece {
       g.beginPath(); g.arc(s.x, s.y, 1.4 + 2.2 * a, 0, TAU); g.fill();
     }
 
-    // ---- 손 자체: 또렷한 빛-스켈레톤 -------------------------------------------
+    // ---- 손 표시 없음 — 붓 촉과 리본이 곧 손의 위치다 ---------------------------
     for (const h of this.hands) {
       if (h.glow < 0.02) continue;
       const hue = h.hue | 0;
-      const hg = g.createRadialGradient(h.cx, h.cy, 0, h.cx, h.cy, h.r * 1.5);
-      hg.addColorStop(0, `hsla(${hue},90%,65%,${0.14 * h.glow})`);
-      hg.addColorStop(1, "hsla(0,0%,0%,0)");
-      g.fillStyle = hg; g.beginPath(); g.arc(h.cx, h.cy, h.r * 1.5, 0, TAU); g.fill();
-      // 다정한 링 하나 — 손 위치 표시 (스켈레톤 없음)
-      g.strokeStyle = `hsla(${hue},80%,80%,${0.6 * h.glow})`; g.lineWidth = 2;
-      g.beginPath(); g.arc(h.cx, h.cy, h.r * (0.8 + Math.sin(t * 3) * 0.05), 0, TAU); g.stroke();
       // 붓 촉(그리기) / 지우개 링(펼침)
       if (h.erase) {
         g.strokeStyle = `hsla(0,0%,96%,${0.55 * h.glow})`; g.lineWidth = 2;

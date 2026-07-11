@@ -86,27 +86,53 @@ export default class PalmFireworks extends VisionPiece {
     r.hue = hue; r.type = type; r.tacc = 0;
   }
 
-  _burst(x, y, hue, type) {
-    const scale = this.burstSize;
-    let n = type === 0 ? 78 : type === 1 ? 60 : 68;
-    n = Math.max(10, (n * scale) | 0);
-    const spd = (type === 1 ? 150 : 220) * (0.7 + 0.5 * scale);
+  // 폭죽 8종 — 실제 불꽃축제(모란·국화·버드나무·야자·토성고리·크로세트·
+  // 반짝이·브로케이드 왕관)를 참고. 크기·모양·색·2차 폭발까지 다양하게.
+  _burst(x, y, hue, type, sizeMul = 1) {
+    const scale = this.burstSize * sizeMul;
+    const T = type % 8;
+    const NS = [90, 64, 110, 22, 72, 26, 70, 84];      // 종류별 파편 수
+    let n = Math.max(10, (NS[T] * scale) | 0);
+    const SPD = [230, 155, 250, 260, 210, 240, 150, 200];
+    const spd = SPD[T] * (0.65 + 0.55 * scale);
+    const bicolor = Math.random() < 0.3;               // 2색 폭죽
+    const hue2 = (hue + 140) % 360;
     for (let k = 0; k < n; k++) {
       const p = this._freeBurst();
       if (!p) break;
-      const a = Math.random() * TAU;
-      const s = spd * (type === 0 ? (0.55 + Math.random() * 0.55) : (0.5 + Math.random() * 0.7));
+      let a = Math.random() * TAU, s = spd;
       p.on = true; p.x = x; p.y = y; p.px = x; p.py = y;
-      p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s;
-      p.type = type;
-      p.hue = (hue + rand(-16, 16) + 360) % 360;
-      p.sat = rand(72, 100); p.light = rand(60, 82);
-      if (type === 0) { p.grav = 95; p.max = rand(1.0, 1.7); }        // 모란: 방사 구형
-      else if (type === 1) { p.vy -= 40; p.grav = 220; p.max = rand(1.5, 2.2); } // 버드나무: 낙하 꼬리
-      else { p.grav = 46; p.max = rand(1.4, 2.1); p.tw = rand(7, 15); p.ph = rand(0, TAU); } // 반짝이
+      p.type = 0; p.tw = 0; p.ph = rand(0, TAU); p.crosette = false;
+      p.hue = ((bicolor && k % 2 ? hue2 : hue) + rand(-14, 14) + 360) % 360;
+      p.sat = rand(72, 100); p.light = rand(60, 84);
+      if (T === 0) {            // 모란: 촘촘한 정구형
+        s *= 0.9 + Math.random() * 0.15; p.grav = 90; p.max = rand(1.0, 1.6);
+      } else if (T === 1) {     // 버드나무: 길게 늘어지는 금빛 낙하
+        s *= 0.5 + Math.random() * 0.6; p.vyExtra = -40; p.grav = 230; p.max = rand(1.8, 2.6);
+        p.hue = (42 + rand(-10, 10) + 360) % 360; p.sat = rand(80, 100);
+      } else if (T === 2) {     // 국화: 구형 + 바깥 껍질이 더 밝음
+        s *= (k < n * 0.7 ? 0.95 + Math.random() * 0.1 : 0.45 + Math.random() * 0.3);
+        p.grav = 85; p.max = rand(1.1, 1.7); if (k < n * 0.7) p.light = rand(75, 90);
+      } else if (T === 3) {     // 야자: 굵은 가지 소수가 뻗어나감
+        a = (k / n) * TAU + rand(-0.06, 0.06);
+        s *= 0.95; p.grav = 150; p.max = rand(1.6, 2.2); p.type = 1;
+      } else if (T === 4) {     // 토성 고리: 링 + 심
+        if (k < n * 0.75) { s *= 0.98 + Math.random() * 0.04; }        // 얇은 링
+        else { s *= Math.random() * 0.25; }                             // 심
+        p.grav = 70; p.max = rand(1.2, 1.8);
+      } else if (T === 5) {     // 크로세트: 사방 소수 가지, 끝에서 2차 폭발
+        a = (k / n) * TAU; s *= 0.9; p.grav = 110; p.max = rand(0.8, 1.1);
+        p.crosette = true;
+      } else if (T === 6) {     // 반짝이(스트로브): 느리게 퍼지며 점멸
+        s *= 0.4 + Math.random() * 0.6; p.grav = 42; p.max = rand(1.6, 2.4); p.tw = rand(8, 16);
+      } else {                  // 브로케이드 왕관: 넓게 퍼진 뒤 오래 늘어짐
+        s *= 0.8 + Math.random() * 0.3; p.grav = 170; p.max = rand(2.0, 3.0);
+        p.light = rand(70, 88); p.tw = rand(0, 4);
+      }
+      p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s + (p.vyExtra || 0);
+      p.vyExtra = 0;
       p.life = p.max;
     }
-    // 하늘·지면에 섬광
     this.ground.glow = Math.max(this.ground.glow, 0.9);
     this.ground.hue = hue;
   }
@@ -156,7 +182,7 @@ export default class PalmFireworks extends VisionPiece {
     // 커서 폴백: 클릭 = 로켓 한 발 (바닥에서 커서 높이로 솟아 터짐)
     if (this.status === "ready") return;   // 카메라 모드에선 손 제스처가 담당
     const x = this.pointer.x, y = this.pointer.y;
-    this._launch(x, this.h + 8, rand(-20, 20), -600, y, rand(0, 360), (Math.random() * 3) | 0);
+    this._launch(x, this.h + 8, rand(-20, 20), -600, y, rand(0, 360), (Math.random() * 8) | 0);
   }
 
   _scene(dt, t, viaCam) {
@@ -204,7 +230,7 @@ export default class PalmFireworks extends VisionPiece {
       if (hvy < -760 && h.cool <= 0 && h.spread > 0.28) {
         h.cool = 0.5;
         const vy = clamp(hvy * 0.62, -940, -470);
-        this._launch(h.x, h.y, hvx * 0.28, vy, h.y - rand(H * 0.42, H * 0.6), rand(0, 360), (Math.random() * 3) | 0);
+        this._launch(h.x, h.y, hvx * 0.28, vy, h.y - rand(H * 0.42, H * 0.6), rand(0, 360), (Math.random() * 8) | 0);
       }
       h.px = h.x; h.py = h.y;
     }
@@ -217,7 +243,7 @@ export default class PalmFireworks extends VisionPiece {
     else if (this._ambT <= 0) {
       this._ambT = rand(1.8, 3.4);
       this._launch(rand(W * 0.2, W * 0.8), H + 8, rand(-25, 25), -rand(540, 660),
-        rand(H * 0.16, H * 0.42), rand(0, 360), (Math.random() * 3) | 0);
+        rand(H * 0.16, H * 0.42), rand(0, 360), (Math.random() * 8) | 0);
     }
 
     // ---- 로켓: 상승 → 정점에서 폭발 --------------------------------------------
@@ -229,7 +255,7 @@ export default class PalmFireworks extends VisionPiece {
       r.x += r.vx * dt; r.y += r.vy * dt;
       r.tacc += dt;
       while (r.tacc >= 0.018) { r.tacc -= 0.018; this._emitTrail(r.x, r.y, 40 + rand(-8, 10)); }
-      if (r.y <= r.targetY || r.vy > -60) { this._burst(r.x, r.y, r.hue, r.type); r.on = false; continue; }
+      if (r.y <= r.targetY || r.vy > -60) { this._burst(r.x, r.y, r.hue, r.type, rand(0.75, 1.55)); r.on = false; continue; }
       // 발광 머리 + 짧은 꼬리
       g.strokeStyle = `hsla(${r.hue},90%,72%,0.5)`; g.lineWidth = 2;
       g.beginPath(); g.moveTo(r.px, r.py); g.lineTo(r.x, r.y); g.stroke();
@@ -254,7 +280,7 @@ export default class PalmFireworks extends VisionPiece {
     for (const p of this.bursts) {
       if (!p.on) continue;
       p.life -= dt;
-      if (p.life <= 0) { p.on = false; continue; }
+      if (p.life <= 0) { p.on = false; if (p.crosette) { p.crosette = false; this._burst(p.x, p.y, p.hue, 0, 0.28); } continue; }
       p.px = p.x; p.py = p.y;
       const drag = p.type === 1 ? 0.9 : 1.35;
       p.vx *= Math.exp(-dt * drag);
@@ -262,7 +288,7 @@ export default class PalmFireworks extends VisionPiece {
       p.x += p.vx * dt; p.y += p.vy * dt;
       const lf = clamp(p.life / p.max, 0, 1);
       let a = lf;
-      if (p.type === 2) a *= 0.28 + 0.72 * Math.abs(Math.sin(t * p.tw + p.ph)); // 반짝이 점멸
+      if (p.tw > 0) a *= 0.28 + 0.72 * Math.abs(Math.sin(t * p.tw + p.ph)); // 반짝이 점멸
       if (p.type === 1) {
         // 버드나무: 늘어지는 꼬리
         g.strokeStyle = `hsla(${p.hue},${p.sat}%,${p.light}%,${a})`;
@@ -283,21 +309,8 @@ export default class PalmFireworks extends VisionPiece {
     }
     this.ground.glow *= Math.exp(-dt * 1.7);
 
-    // ---- 빛나는 손 (또렷하게 — 어디를 인식하는지 보이도록) ----------------------
-    const CHAINS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [5, 9], [9, 10, 11, 12], [9, 13], [13, 14, 15, 16], [13, 17], [0, 17], [17, 18, 19, 20]];
-    for (const h of this.hands) {
-      if (h.glow < 0.02) continue;
-      // 손바닥 아우라 (분수 준비 표시 — 활짝 펼수록 따뜻하게 밝음)
-      const warm = 0.12 + 0.14 * h.spread;
-      const hg = g.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r * 1.5);
-      hg.addColorStop(0, `rgba(255,205,120,${warm * h.glow})`);
-      hg.addColorStop(1, "rgba(0,0,0,0)");
-      g.fillStyle = hg;
-      g.beginPath(); g.arc(h.x, h.y, h.r * 1.5, 0, TAU); g.fill();
-      // 다정한 링 하나 — "여기가 네 손" (스켈레톤 없음)
-      g.strokeStyle = `rgba(255,215,150,${0.55 * h.glow})`; g.lineWidth = 2;
-      g.beginPath(); g.arc(h.x, h.y, h.r * (0.8 + Math.sin(t * 3) * 0.05), 0, TAU); g.stroke();
-    }
+    // (손 표시 없음 — 손바닥의 불티 분수가 곧 손의 위치다)
+
     g.globalCompositeOperation = "source-over";
 
     // ---- 캡션 -------------------------------------------------------------------

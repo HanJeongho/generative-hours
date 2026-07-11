@@ -20,7 +20,7 @@ const CHAINS = [[0, 1, 2, 3, 4], [0, 5, 6, 7, 8], [5, 9], [9, 10, 11, 12], [9, 1
 const SEG = [];
 for (const ch of CHAINS) for (let k = 1; k < ch.length; k++) SEG.push([ch[k - 1], ch[k]]);
 const NSEG = SEG.length;            // 20 뼈마디
-const SNOW_MAX = 17;                // 세그먼트당 최대 적설(px)
+const SNOW_MAX = 26;                // 세그먼트당 최대 적설(px)
 const SHAKE = 820;                  // 눈털기 속도 문턱(px/s)
 const NF = 72;                      // 바닥 눈 언덕 컬럼 수
 
@@ -185,7 +185,7 @@ export default class SnowHands extends VisionPiece {
     }
 
     // ---- 눈송이: 스폰 · 낙하 · 손에 쌓임 · 바닥 퇴적 --------------------------
-    this._flkAcc += dt * 78 * this.snowAmt;
+    this._flkAcc += dt * 200 * this.snowAmt;
     while (this._flkAcc >= 1) { this._flkAcc -= 1; this._spawnFlake(W); }
     g.fillStyle = "#ffffff";
     for (const f of this.flakes) {
@@ -205,7 +205,7 @@ export default class SnowHands extends VisionPiece {
             for (let i = 0; i < NSEG; i++) {
               const a = h.pts[SEG[i][0]], b = h.pts[SEG[i][1]];
               const cr = 7 + h.snow[i] * 0.45;
-              if (this._seg(f.x, f.y, a.x, a.y, b.x, b.y) < cr) { h.snow[i] = Math.min(SNOW_MAX, h.snow[i] + 2.0); landed = true; break; }
+              if (this._seg(f.x, f.y, a.x, a.y, b.x, b.y) < cr) { h.snow[i] = Math.min(SNOW_MAX, h.snow[i] + 3.2); landed = true; break; }
             }
           } else {
             const ew = 52, cr = 7 + h.eave * 0.4;
@@ -308,7 +308,7 @@ export default class SnowHands extends VisionPiece {
       for (let i = 0; i < NSEG; i++) {
         if (h.snow[i] < 0.6) continue;
         const a = h.pts[SEG[i][0]], b = h.pts[SEG[i][1]];
-        const n = 1 + Math.min(3, (h.snow[i] / 6) | 0);
+        const n = 4 + Math.min(10, (h.snow[i] / 2) | 0);   // 극적으로 후두둑
         for (let k = 0; k < n; k++) {
           const u = Math.random();
           this._spawnDrop(lerp(a.x, b.x, u), lerp(a.y, b.y, u), nx * rand(120, 260), ny * rand(120, 260) + 40);
@@ -326,22 +326,31 @@ export default class SnowHands extends VisionPiece {
   _drawHand(g, h) {
     const p = h.pts, gl = h.glow;
     g.lineCap = "round"; g.lineJoin = "round";
-    // 스켈레톤 없음 — 손은 '쌓인 눈' 그 자체로 보인다. 눈이 아직 없을 땐
-    // 아주 희미한 서리 밑그림만 깔려 어디에 쌓일지 짐작하게 한다.
-    g.strokeStyle = `rgba(170,205,245,${0.10 * gl})`; g.lineWidth = 7;
-    for (const ch of CHAINS) {
-      g.beginPath(); g.moveTo(p[ch[0]].x, p[ch[0]].y);
-      for (let k = 1; k < ch.length; k++) g.lineTo(p[ch[k]].x, p[ch[k]].y);
-      g.stroke();
+    // 귀엽고 통통한 벙어리장갑 손: 두툼한 라운드 스트로크 실루엣 + 밝은 테두리
+    for (const [w, col] of [[26, `rgba(120,160,215,${0.55 * gl})`], [20, `rgba(165,200,240,${0.75 * gl})`]]) {
+      g.strokeStyle = col; g.lineWidth = w;
+      for (const ch of CHAINS) {
+        g.beginPath(); g.moveTo(p[ch[0]].x, p[ch[0]].y);
+        for (let k = 1; k < ch.length; k++) g.lineTo(p[ch[k]].x, p[ch[k]].y);
+        g.stroke();
+      }
     }
+    // 볼록한 손바닥 + 발그레한 볼터치 느낌
+    let pcx = 0, pcy = 0;
+    for (const i of [0, 5, 9, 13, 17]) { pcx += p[i].x; pcy += p[i].y; }
+    pcx /= 5; pcy /= 5;
+    g.fillStyle = `rgba(165,200,240,${0.75 * gl})`;
+    g.beginPath(); g.arc(pcx, pcy, 24, 0, TAU); g.fill();
+    g.fillStyle = `rgba(255,170,180,${0.25 * gl})`;
+    g.beginPath(); g.arc(pcx, pcy + 6, 10, 0, TAU); g.fill();
     // 도톰한 눈 능선 — 뼈마디마다 적설량만큼 굵게 (이게 곧 손의 형상)
     for (let i = 0; i < NSEG; i++) {
       const s = h.snow[i];
       if (s < 0.4) continue;
       const a = p[SEG[i][0]], b = p[SEG[i][1]];
-      g.strokeStyle = `rgba(198,222,255,${0.55 * gl})`; g.lineWidth = s * 2 + 3;
+      g.strokeStyle = `rgba(210,230,255,${0.7 * gl})`; g.lineWidth = s * 2.6 + 5;
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
-      g.strokeStyle = `rgba(255,255,255,${0.92 * gl})`; g.lineWidth = s * 2;
+      g.strokeStyle = `rgba(255,255,255,${0.95 * gl})`; g.lineWidth = s * 2.4;
       g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
     }
   }
@@ -392,6 +401,6 @@ export default class SnowHands extends VisionPiece {
   }
 
   controls(host) {
-    host.appendChild(slider("SNOW", 0.3, 2.2, this.snowAmt, 0.05, (v) => (this.snowAmt = v)));
+    host.appendChild(slider("SNOW", 0.5, 5, this.snowAmt, 0.05, (v) => (this.snowAmt = v)));
   }
 }

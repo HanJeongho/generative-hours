@@ -184,7 +184,7 @@ export default class BubbleHands extends VisionPiece {
       g.fillStyle = body;
       g.beginPath(); g.arc(b.x, b.y, b.r, 0, TAU); g.fill();
       // oil-film rim: two hue-rotated arcs
-      g.lineWidth = Math.max(1.2, b.r * 0.12);
+      g.lineWidth = Math.min(2.4, Math.max(1.2, b.r * 0.07));
       g.strokeStyle = `hsla(${b.hue % 360},85%,70%,0.5)`;
       g.beginPath(); g.arc(b.x, b.y, b.r * 0.94, b.ph, b.ph + Math.PI * 1.2); g.stroke();
       g.strokeStyle = `hsla(${(b.hue + 140) % 360},85%,72%,0.4)`;
@@ -209,24 +209,23 @@ export default class BubbleHands extends VisionPiece {
     }
     g.globalAlpha = 1;
 
-    // ---- 손 표시: 스켈레톤 없이, 다정한 빛 오라만 --------------------------------
+    // ---- 손 표시: 작은 고정 원 하나 ------------------------------------------------
     for (const h of this.hands) {
       if (h.glow < 0.02) continue;
       const charge = h.fistT / 4;
-      // soft aura wrapping the whole hand (grows warm while the fist charges)
-      const hg = g.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r * 1.3);
-      hg.addColorStop(0, `rgba(${140 + charge * 90 | 0},${235 - charge * 60 | 0},${190 - charge * 60 | 0},${(0.20 + charge * 0.15) * h.glow})`);
+      const mr = 13;                                   // 손 크기와 무관한 작은 마커
+      const hg = g.createRadialGradient(h.x, h.y, 0, h.x, h.y, mr * 2.6);
+      hg.addColorStop(0, `rgba(${140 + charge * 90 | 0},${235 - charge * 60 | 0},${190 - charge * 60 | 0},${(0.22 + charge * 0.12) * h.glow})`);
       hg.addColorStop(1, "rgba(0,0,0,0)");
       g.fillStyle = hg;
-      g.beginPath(); g.arc(h.x, h.y, h.r * 1.3, 0, TAU); g.fill();
-      // a single breathing ring — "여기가 네 손이야"
-      g.strokeStyle = `rgba(200,255,228,${0.55 * h.glow})`;
-      g.lineWidth = 2;
-      g.beginPath(); g.arc(h.x, h.y, h.r * (0.8 + Math.sin(t * 3) * 0.05) + charge * 10, 0, TAU); g.stroke();
-      if (charge > 0.05) {                               // 주먹 충전 표시: 차오르는 링
-        g.strokeStyle = `rgba(255,220,150,${0.7 * h.glow})`;
-        g.lineWidth = 3.5;
-        g.beginPath(); g.arc(h.x, h.y, h.r * 0.8 + charge * 10, -Math.PI / 2, -Math.PI / 2 + charge * TAU); g.stroke();
+      g.beginPath(); g.arc(h.x, h.y, mr * 2.6, 0, TAU); g.fill();
+      g.strokeStyle = `rgba(200,255,228,${0.6 * h.glow})`;
+      g.lineWidth = 1.6;
+      g.beginPath(); g.arc(h.x, h.y, mr + Math.sin(t * 3) * 1.2, 0, TAU); g.stroke();
+      if (charge > 0.05) {                             // 주먹 충전: 같은 굵기의 진행 링
+        g.strokeStyle = `rgba(255,220,150,${0.75 * h.glow})`;
+        g.lineWidth = 1.6;
+        g.beginPath(); g.arc(h.x, h.y, mr + 5, -Math.PI / 2, -Math.PI / 2 + charge * TAU); g.stroke();
       }
     }
 
