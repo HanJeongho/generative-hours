@@ -30,7 +30,7 @@ const IMG_W = 1400, IMG_H = 1200;         // 원본 픽셀 크기 (신윤복 〈
 // ── 이미지 비율(0..1) 좌표 — 시각 캘리브레이션용 상수(중앙에서 조정 가능) ──────
 const LANTERN = { u: 0.865, v: 0.655, r: 0.035 };   // 초롱불 위치·몸통 반경
 const CHEEK_W = { u: 0.690, v: 0.455 };             // 여인 볼 (마커 검증으로 보정)
-const CHEEK_M = { u: 0.852, v: 0.362 };             // 남자 볼 (마커 검증으로 보정)
+const CHEEK_M = { u: 0.858, v: 0.362 };             // 남자 볼 (마커 검증으로 보정)
 const MOON    = { u: 0.27,  v: 0.21 };              // 초승달
 
 // ── 타이밍 ───────────────────────────────────────────────────────────────────
@@ -165,14 +165,24 @@ export default class Wolha extends Piece {
     }
   }
 
-  // ── 볼 홍조: 장미빛 가산 라디얼 — 또렷하되 부드럽게 스윽 ─────────────────────
+  // ── 볼 홍조: 밝은 화지 위 가산은 하얗게 떠서 안 보인다 —
+  //    곱하기(multiply)로 살결을 장밋빛으로 '물들이고', 중심에 옅은 장미를 얹는다.
   _blush(g, x, y, r, a) {
-    const bg = g.createRadialGradient(x, y, 0, x, y, r);
-    bg.addColorStop(0, `rgba(255,120,116,${0.55 * a})`);
-    bg.addColorStop(0.55, `rgba(244,100,104,${0.26 * a})`);
-    bg.addColorStop(1, "rgba(230,90,96,0)");
-    g.fillStyle = bg;
+    g.save();
+    g.globalCompositeOperation = "multiply";
+    const mg = g.createRadialGradient(x, y, 0, x, y, r);
+    mg.addColorStop(0, `rgba(226,130,132,${0.85 * a})`);
+    mg.addColorStop(0.65, `rgba(238,178,180,${0.4 * a})`);
+    mg.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = mg;
     g.fillRect(x - r, y - r, r * 2, r * 2);
+    g.globalCompositeOperation = "source-over";
+    const sg = g.createRadialGradient(x, y, 0, x, y, r * 0.7);
+    sg.addColorStop(0, `rgba(232,104,106,${0.32 * a})`);
+    sg.addColorStop(1, "rgba(232,104,106,0)");
+    g.fillStyle = sg;
+    g.fillRect(x - r, y - r, r * 2, r * 2);
+    g.restore();
   }
 
   // 캡션 없음 — 화제(月沈沈…)는 원작 화면 안에 이미 쓰여 있다. 안내는 힌트바가 한다.
