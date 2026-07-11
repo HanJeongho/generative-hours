@@ -1592,6 +1592,177 @@ const thumbPainters = {
   g.fillStyle = "rgba(150,200,255,0.32)";
   g.beginPath(); g.arc(cx, cy, W * 0.06, 0, 6.283); g.fill();
 },
+  "90"(ctx, W, H, a) {                       // 풍선 불기 — 파스텔 풍선 다발
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#12203c"); sky.addColorStop(0.6, "#22345c"); sky.addColorStop(1, "#3a4a78");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(255,255,255,0.10)";
+    for (const [cx, cy, r] of [[W * 0.2, H * 0.75, 16], [W * 0.8, H * 0.68, 20]]) {
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.arc(cx + r, cy + 4, r * 0.7, 0, Math.PI * 2); ctx.fill();
+    }
+    const cols = ["#f5a8c0", "#ffd98a", "#9fd8ff", "#c5a8f5", "#a8f0c8"];
+    const pos = [[0.24, 0.30, 22], [0.42, 0.20, 26], [0.60, 0.32, 20], [0.76, 0.22, 24], [0.5, 0.46, 15]];
+    pos.forEach(([fx, fy, r], i) => {
+      const x = fx * W, y = fy * H;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x, y + r); ctx.quadraticCurveTo(x + 6, y + r + 18, x - 4, y + r + 34); ctx.stroke();
+      ctx.fillStyle = cols[i % cols.length];
+      ctx.beginPath(); ctx.ellipse(x, y, r * 0.86, r, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.35, r * 0.22, 0, Math.PI * 2); ctx.fill();
+    });
+    ctx.fillStyle = "rgba(255,226,130,0.95)";
+    for (let i = 0; i < 5; i++) {
+      const an = -Math.PI / 2 + (i * Math.PI * 2) / 5, x = W * 0.5 + Math.cos(an) * 9, y = H * 0.72 + Math.sin(an) * 9;
+      ctx.beginPath(); ctx.arc(x, y, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+  },
+  "91"(ctx, W, H, a) {                       // 리본 체조 — 장미빛·물빛 리본
+    ctx.fillStyle = "#0b0a14"; ctx.fillRect(0, 0, W, H);
+    const spot = ctx.createRadialGradient(W * 0.5, H * 0.35, 0, W * 0.5, H * 0.35, H * 0.75);
+    spot.addColorStop(0, "rgba(255,240,220,0.14)"); spot.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = spot; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    const ribbon = (pts, col) => {
+      for (const [w2, al] of [[10, 0.18], [4, 0.7]]) {
+        ctx.strokeStyle = col.replace("AL", String(al)); ctx.lineWidth = w2;
+        ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+        ctx.bezierCurveTo(pts[1][0], pts[1][1], pts[2][0], pts[2][1], pts[3][0], pts[3][1]);
+        ctx.stroke();
+      }
+    };
+    ribbon([[W * 0.16, H * 0.72], [W * 0.36, H * 0.28], [W * 0.5, H * 0.66], [W * 0.62, H * 0.30]], "rgba(255,120,170,AL)");
+    ribbon([[W * 0.84, H * 0.78], [W * 0.64, H * 0.40], [W * 0.52, H * 0.78], [W * 0.40, H * 0.44]], "rgba(110,220,235,AL)");
+    ctx.fillStyle = "rgba(255,235,160,0.9)";
+    for (const [x, y] of [[W * 0.62, H * 0.28], [W * 0.40, H * 0.42], [W * 0.52, H * 0.18]]) {
+      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  },
+  "92"(ctx, W, H, a) {                       // 표정 날씨 — 해 뜨는 초원과 무지개
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#3a5a8c"); sky.addColorStop(0.55, "#e8a86a"); sky.addColorStop(0.75, "#f2c98a");
+    sky.addColorStop(0.78, "#4a7a4c"); sky.addColorStop(1, "#2f5c38");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    const sun = ctx.createRadialGradient(W * 0.3, H * 0.62, 0, W * 0.3, H * 0.62, 42);
+    sun.addColorStop(0, "rgba(255,235,170,0.95)"); sun.addColorStop(1, "rgba(255,200,110,0)");
+    ctx.fillStyle = sun; ctx.beginPath(); ctx.arc(W * 0.3, H * 0.62, 42, 0, Math.PI * 2); ctx.fill();
+    for (let b2 = 0; b2 < 4; b2++) {
+      ctx.strokeStyle = ["rgba(255,110,110,0.5)", "rgba(255,210,110,0.5)", "rgba(120,230,140,0.5)", "rgba(120,170,255,0.5)"][b2];
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(W * 0.72, H * 0.86, 56 - b2 * 6, Math.PI, Math.PI * 1.98); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath(); ctx.arc(W * 0.62, H * 0.24, 10, 0, Math.PI * 2); ctx.arc(W * 0.70, H * 0.26, 8, 0, Math.PI * 2); ctx.arc(W * 0.55, H * 0.27, 7, 0, Math.PI * 2); ctx.fill();
+    for (const [fx, col] of [[0.2, "#ffb0c8"], [0.45, "#ffd98a"], [0.85, "#c5a8f5"]]) {
+      const x = fx * W, y = H * 0.88;
+      ctx.strokeStyle = "rgba(60,110,70,0.9)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x, y + 8); ctx.lineTo(x, y - 4); ctx.stroke();
+      ctx.fillStyle = col;
+      for (let k = 0; k < 5; k++) {
+        const an = (k * Math.PI * 2) / 5;
+        ctx.beginPath(); ctx.ellipse(x + Math.cos(an) * 5, y - 4 + Math.sin(an) * 5, 3.4, 2.2, an, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  },
+  "93"(ctx, W, H, a) {                       // 동물 따라쟁이 — 갸웃한 아기 고양이
+    const bg = ctx.createRadialGradient(W * 0.5, H * 0.45, 0, W * 0.5, H * 0.45, H * 0.8);
+    bg.addColorStop(0, "#2a2438"); bg.addColorStop(1, "#161222");
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.save(); ctx.translate(W * 0.5, H * 0.5); ctx.rotate(-0.12);
+    const R = Math.min(W, H) * 0.30;
+    ctx.fillStyle = "#f2c088";
+    for (const sx of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(sx * R * 0.42, -R * 0.62); ctx.lineTo(sx * R * 0.86, -R * 1.12); ctx.lineTo(sx * R * 0.92, -R * 0.44);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.beginPath(); ctx.ellipse(0, 0, R, R * 0.92, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#241c14";
+    ctx.beginPath(); ctx.arc(-R * 0.34, -R * 0.1, R * 0.13, 0, Math.PI * 2); ctx.arc(R * 0.34, -R * 0.1, R * 0.13, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath(); ctx.arc(-R * 0.30, -R * 0.14, R * 0.045, 0, Math.PI * 2); ctx.arc(R * 0.38, -R * 0.14, R * 0.045, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#e88a7a";
+    ctx.beginPath(); ctx.ellipse(0, R * 0.14, R * 0.10, R * 0.07, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(60,42,30,0.8)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.arc(-R * 0.10, R * 0.22, R * 0.10, 0.1, Math.PI - 0.4); ctx.arc(R * 0.10, R * 0.22, R * 0.10, 0.3, Math.PI - 0.1); ctx.stroke();
+    for (const sx of [-1, 1]) for (let k = 0; k < 3; k++) {
+      ctx.beginPath(); ctx.moveTo(sx * R * 0.5, R * (0.05 + k * 0.09));
+      ctx.lineTo(sx * R * 0.95, R * (0.0 + k * 0.12)); ctx.stroke();
+    }
+    ctx.fillStyle = "rgba(240,130,140,0.5)";
+    ctx.beginPath(); ctx.arc(-R * 0.52, R * 0.16, R * 0.11, 0, Math.PI * 2); ctx.arc(R * 0.52, R * 0.16, R * 0.11, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.fillStyle = "rgba(255,230,150,0.9)";
+    for (const [x, y] of [[W * 0.2, H * 0.22], [W * 0.82, H * 0.3], [W * 0.75, H * 0.14]]) {
+      ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
+    }
+  },
+  "94"(ctx, W, H, a) {                       // 빛의 정원 — 손비와 꽃밭
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#141a30"); sky.addColorStop(0.7, "#232a48"); sky.addColorStop(1, "#1c3020");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    const palm = ctx.createRadialGradient(W * 0.5, H * 0.22, 0, W * 0.5, H * 0.22, 26);
+    palm.addColorStop(0, "rgba(190,240,215,0.9)"); palm.addColorStop(1, "rgba(140,220,190,0)");
+    ctx.fillStyle = palm; ctx.beginPath(); ctx.arc(W * 0.5, H * 0.22, 26, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(180,235,255,0.75)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+    for (let i = 0; i < 6; i++) {
+      const x = W * (0.38 + i * 0.05), y0 = H * (0.3 + (i % 3) * 0.1);
+      ctx.beginPath(); ctx.moveTo(x, y0); ctx.lineTo(x, y0 + 12); ctx.stroke();
+    }
+    const gy = H * 0.86;
+    const flowers = [[0.2, 1, "#ffb0c8"], [0.38, 0.6, "#ffd98a"], [0.56, 1, "#c5a8f5"], [0.74, 0.35, "#9fd8ff"], [0.88, 1, "#ffb0c8"]];
+    for (const [fx, st, col] of flowers) {
+      const x = fx * W;
+      ctx.strokeStyle = "rgba(120,200,130,0.9)"; ctx.lineWidth = 2.4;
+      ctx.beginPath(); ctx.moveTo(x, gy + 6); ctx.lineTo(x, gy - 14 * st); ctx.stroke();
+      if (st < 0.5) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, gy - 14 * st - 3, 4, 0, Math.PI * 2); ctx.fill(); continue; }
+      ctx.fillStyle = col;
+      for (let k = 0; k < 6; k++) {
+        const an = (k * Math.PI * 2) / 6;
+        ctx.beginPath(); ctx.ellipse(x + Math.cos(an) * 6.5, gy - 14 - 0 + Math.sin(an) * 6.5, 4.4, 2.8, an, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = "rgba(255,240,190,0.95)"; ctx.beginPath(); ctx.arc(x, gy - 14, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = "rgba(255,210,120,0.9)";
+    ctx.save(); ctx.translate(W * 0.65, H * 0.6); ctx.rotate(0.4);
+    ctx.beginPath(); ctx.ellipse(-4, 0, 5, 8, -0.5, 0, Math.PI * 2); ctx.ellipse(4, 0, 5, 8, 0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  },
+  "95"(ctx, W, H, a) {                       // 아기 용 — 노을 하늘의 반려 용
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#5a2a52"); sky.addColorStop(0.55, "#c8583a"); sky.addColorStop(1, "#f2a05a");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(40,20,40,0.75)";
+    for (const [fx, fy, w2] of [[0.18, 0.78, 44], [0.72, 0.85, 60]]) {
+      ctx.beginPath(); ctx.ellipse(fx * W, fy * H, w2, 10, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = "rgba(255,240,180,0.9)";
+    for (let i = 0; i < 6; i++) {
+      const an = Math.PI * (0.2 + i * 0.13);
+      ctx.beginPath(); ctx.arc(W * 0.5 + Math.cos(an) * 52, H * 0.42 + Math.sin(an) * 34, 1.8, 0, Math.PI * 2); ctx.fill();
+    }
+    const hx = W * 0.55, hy = H * 0.42;
+    const seg = [[0, 0, 16], [-14, 8, 12], [-26, 15, 9], [-36, 21, 6.5], [-44, 26, 4.5]];
+    ctx.fillStyle = "#8fd8a8";
+    for (let i = seg.length - 1; i >= 0; i--) {
+      const [dx, dy, r] = seg[i];
+      ctx.beginPath(); ctx.arc(hx + dx, hy + dy, r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = "#bff0d0";
+    ctx.beginPath(); ctx.ellipse(hx - 12, hy - 8, 9, 12, -0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(hx + 5, hy - 4, 5.5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#241c20";
+    ctx.beginPath(); ctx.arc(hx + 6.5, hy - 4, 2.8, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "rgba(240,130,140,0.6)";
+    ctx.beginPath(); ctx.arc(hx + 1, hy + 4, 3.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f2b05a";
+    ctx.beginPath(); ctx.moveTo(hx + 14, hy - 2); ctx.lineTo(hx + 22, hy); ctx.lineTo(hx + 14, hy + 4); ctx.closePath(); ctx.fill();
+  },
   "81"(ctx, W, H, a) {                       // 일월오봉도 — 살아있는 병풍
     const sky = ctx.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, "#20325a"); sky.addColorStop(1, "#0e1730");
     ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
