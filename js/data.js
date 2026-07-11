@@ -18,7 +18,6 @@ export const WINGS = [
   { id: "tiny",   index: "IX",  name: "Tiny Journeys", sub: "작은 것들의 모험", accent: "#ffd27c" },
   { id: "canvas", index: "X",   name: "Re-rendered Masters", sub: "다시 그린 명화", accent: "#e8c66a" },
   { id: "time",   index: "XI",  name: "Ways of Telling Time", sub: "시간을 세는 법", accent: "#c0c8d0" },
-  { id: "play",   index: "XII", name: "Little Hands", sub: "아이들의 방 · 카메라 놀이터", accent: "#6de5b9" },
   // hidden vault — 비공개 보관고. 내비/갤러리에 노출되지 않고 딥링크(#work-NN)로만 접근.
   { id: "vault", index: "\u2014", name: "Storage Vault", sub: "수장고 · 비공개", accent: "#8a93a5", hidden: true },
 ];
@@ -459,14 +458,6 @@ no: "45", wing: "time", title: "Sand Mandala", ko: "모래 만다라",
     note: "같은 5분을 기다리는 사람은 한 시간으로, 늦는 사람은 한순간으로 산다 — 둘 다 거짓이 아니다. 검은 벌판 위 두 빛점을 가느다란 빛의 실이 잇는다. 그 실이 곧 약속이고, 당신은 실 위를 걷는 한 걸음의 빛이다. 기다리는 끝으로 다가가면 세계가 기어가듯 느려지고 초가 돌처럼 무겁게 내려앉으며, 반대 끝으로 건너가면 프레임이 탁 바뀌어 당신이 내달리고 세계가 줄무늬로 흐른다. 기다림의 끝에는 벽시계의 매 초마다 창백한 시간-입자가 쌓여 발광하는 성운으로 부푸는데, 이것만은 당신의 체감과 무관하게 자라난다. 구석의 시계는 실제 시각을 무보정으로 읽어, 늦는 자로 내달렸다 돌아왔을 때 당신이 남기고 온 체감-시간의 산더미를 보여준다.",
     hint: "실 위를 드래그로 걷기 — 기다림 끝(느림)과 늦음 끝(빠름) 사이 · [약속 —지금+5분]으로 진짜 카운트다운 · 구석 시계는 무보정 실제 시각",
     module: "./pieces/73-fiveminutes.js",
-  },
-  {
-    no: "74", wing: "play", title: "Bubble Hands", ko: "비눗방울 손",
-    medium: "MediaPipe hand-tracking (up to 4 hands) · Canvas2D",
-    year: "2026",
-    note: "손을 들면, 손끝이 가는 곳마다 비눗방울이 계속 피어난다. 카메라는 손을 네 개까지 본다 — 두 아이가 나란히 서서 양손으로 함께 불 수 있다는 뜻이다. 방울 표면엔 얇은 기름막 무지개가 흐르고, 큰 방울일수록 빨리 떠오른다. 천천히 손을 스치면 방울들이 밀려나고, 빠르게 휘두르면 팡! 하고 터져 물방울이 튄다. 한 손으로 불고, 다른 손으로 터뜨리는 놀이. 손이 잠시 없어도 바닥에서 방울이 드문드문 떠올라 방은 늘 숨쉬고 있다.",
-    hint: "카메라를 허용하고 손을 들어 보세요 — 손끝마다 방울 줄기가 · 최대 4손(두 명이 양손) · 빠른 스와이프 = 팡! · 느린 터치 = 밀어내기 · 카메라가 없으면 커서가 손이 됩니다 · BUBBLES로 분출량",
-    module: "./pieces/74-bubblehands.js",
   },
   {
     no: "67", wing: "vault", title: "Gnomon", ko: "도는 것은 그림자가 아니다",

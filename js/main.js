@@ -1461,6 +1461,137 @@ const thumbPainters = {
     }
     ctx.globalCompositeOperation = "source-over";
   },
+  "76"(ctx, W, H, a) {
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#070b1e"); sky.addColorStop(0.8, "#141a3a"); sky.addColorStop(1, "#1c1330");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 20; i++) {
+      const x = (i * 97.13) % W, y = (i * 53.7) % (H * 0.6);
+      ctx.fillStyle = "rgba(220,230,255,0.5)";
+      ctx.beginPath(); ctx.arc(x, y, 0.9, 0, Math.PI * 2); ctx.fill();
+    }
+    const cx = W * 0.62, cy = H * 0.36;
+    for (let k = 0; k < 40; k++) {
+      const ang = (k / 40) * Math.PI * 2, rr = W * 0.19 * (0.7 + 0.3 * ((k * 7) % 5) / 4);
+      const hue = (k * 9 + a * 40) % 360;
+      ctx.strokeStyle = "hsla(" + hue + ",90%,70%,0.85)"; ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.cos(ang) * rr, cy + Math.sin(ang) * rr); ctx.stroke();
+    }
+    const px = W * 0.3, py = H * 0.84;
+    for (let k = 0; k < 24; k++) {
+      const t = k / 24;
+      ctx.fillStyle = "hsla(42,95%,70%," + (1 - t) + ")";
+      ctx.beginPath();
+      ctx.arc(px + Math.sin(k * 1.7) * 13 * t, py - t * H * 0.42, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  },
+  "77"(ctx, W, H, a) {                       // body bounce — beach balls off a glowing stick-figure
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, "#ffd9a0"); sky.addColorStop(0.5, "#ffb3c7"); sky.addColorStop(1, "#a6d9ff");
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = "rgba(120,200,150,0.3)"; ctx.fillRect(0, H - H * 0.08, W, H * 0.08);
+    const balls = [[W * 0.32, H * 0.30, W * 0.11, 200], [W * 0.71, H * 0.24, W * 0.085, 40], [W * 0.60, H * 0.58, W * 0.10, 330]];
+    for (const [x, y, r, hue] of balls) {
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r, i / 6 * Math.PI * 2, (i + 1) / 6 * Math.PI * 2); ctx.closePath();
+        ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.94)" : `hsl(${(hue + i * 24) % 360} 85% 60%)`; ctx.fill();
+      }
+      ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.beginPath(); ctx.arc(x - r * 0.32, y - r * 0.36, r * 0.16, 0, Math.PI * 2); ctx.fill();
+    }
+    const cx = W * 0.5, sy = H * 0.64, sw = W * 0.12, hr = W * 0.05;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    const arms = () => { ctx.beginPath();
+      ctx.moveTo(cx - sw, sy); ctx.lineTo(cx + sw, sy);
+      ctx.moveTo(cx - sw, sy); ctx.lineTo(cx - sw * 1.5, sy - H * 0.14); ctx.lineTo(cx - sw * 1.05, sy - H * 0.30);
+      ctx.moveTo(cx + sw, sy); ctx.lineTo(cx + sw * 1.5, sy - H * 0.14); ctx.lineTo(cx + sw * 1.05, sy - H * 0.30);
+      ctx.stroke(); };
+    ctx.strokeStyle = "rgba(109,229,185,0.35)"; ctx.lineWidth = W * 0.05; arms();
+    ctx.strokeStyle = "rgba(224,255,240,0.9)"; ctx.lineWidth = W * 0.016; arms();
+    ctx.lineWidth = W * 0.014; ctx.beginPath(); ctx.arc(cx, sy - hr * 1.9, hr, 0, Math.PI * 2); ctx.stroke();
+  },
+  "78"(ctx, W, H, a) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#6f5230"); g.addColorStop(0.42, "#c39c60"); g.addColorStop(1, "#ead0a2");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  const cx = W * 0.5, cy = H * 0.99;
+  const cg = ctx.createRadialGradient(cx, cy, 0, cx, cy, H * 0.9);
+  cg.addColorStop(0, "rgba(255,190,110,0.30)"); cg.addColorStop(0.5, "rgba(255,160,90,0.08)"); cg.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = cg; ctx.fillRect(0, 0, W, H);
+  ctx.save(); ctx.translate(W * 0.5, H * 0.52); ctx.scale(1.15, 1.15);
+  ctx.strokeStyle = "rgba(34,20,10,0.85)"; ctx.fillStyle = "rgba(34,20,10,0.85)";
+  ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = H * 0.055;
+  const fingers = [[-0.9, -1.1], [-0.4, -1.5], [0.1, -1.55], [0.55, -1.35], [0.95, -0.85]];
+  for (const f of fingers) { ctx.beginPath(); ctx.moveTo(0, H * 0.12); ctx.lineTo(f[0] * H * 0.16, f[1] * H * 0.16); ctx.stroke(); }
+  ctx.beginPath(); ctx.arc(0, H * 0.12, H * 0.11, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  ctx.globalCompositeOperation = "lighter";
+  const dots = [[0.3, 0.28], [0.72, 0.4], [0.2, 0.62], [0.82, 0.66]];
+  for (const d of dots) {
+    const fx = d[0] * W, fy = d[1] * H, r = H * 0.05;
+    const fg = ctx.createRadialGradient(fx, fy, 0, fx, fy, r);
+    fg.addColorStop(0, "rgba(255,228,152,0.9)"); fg.addColorStop(0.4, "rgba(255,182,92,0.5)"); fg.addColorStop(1, "rgba(255,150,60,0)");
+    ctx.fillStyle = fg; ctx.beginPath(); ctx.arc(fx, fy, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.globalCompositeOperation = "source-over";
+},
+  "79"(ctx, W, H, a) {
+    ctx.fillStyle = "#0b0b18"; ctx.fillRect(0, 0, W, H);
+    const hues = [344, 42, 190, 268];
+    ctx.globalCompositeOperation = "lighter";
+    ctx.lineCap = "round";
+    for (let s = 0; s < 4; s++) {
+      const hue = hues[s], x0 = W * (0.18 + 0.2 * s), y0 = H * 0.82;
+      for (let pass = 0; pass < 2; pass++) {
+        ctx.strokeStyle = pass === 0 ? `hsla(${hue},90%,62%,0.12)` : `hsla(${hue},95%,72%,0.6)`;
+        ctx.lineWidth = pass === 0 ? 12 : 3.2;
+        ctx.beginPath();
+        for (let i = 0; i <= 24; i++) {
+          const f = i / 24;
+          const x = x0 + Math.sin(f * 6 + s + a * 0.5) * W * 0.12 + f * W * 0.04;
+          const y = y0 - f * H * 0.62;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+    }
+    for (let k = 0; k < 22; k++) {
+      const hue = hues[k % 4];
+      const x = (Math.sin(k * 12.9 + a) * 0.5 + 0.5) * W;
+      const y = (Math.cos(k * 7.7) * 0.5 + 0.5) * H;
+      ctx.fillStyle = `hsla(${hue},95%,82%,0.7)`;
+      ctx.beginPath(); ctx.arc(x, y, 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  },
+  "80"(ctx, W, H, a) {
+  const g = ctx;
+  const sky = g.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#0b1230"); sky.addColorStop(1, "#26264e");
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  g.fillStyle = "rgba(255,255,255,0.85)";
+  for (let i = 0; i < 46; i++) {
+    const x = (i * 97.3) % W, y = (i * 53.7 + a * 40) % H;
+    g.beginPath(); g.arc(x, y, (i % 3) * 0.8 + 1, 0, 6.283); g.fill();
+  }
+  g.fillStyle = "rgba(224,236,255,0.95)";
+  g.beginPath(); g.moveTo(0, H);
+  for (let i = 0; i <= 10; i++) g.lineTo(i * W / 10, H - H * 0.12 - Math.sin(i * 1.3) * H * 0.02);
+  g.lineTo(W, H); g.closePath(); g.fill();
+  const cx = W * 0.5, cy = H * 0.56;
+  const fg = [[-0.22, 0.08], [-0.1, -0.28], [0.02, -0.34], [0.14, -0.3], [0.24, -0.16]];
+  g.lineCap = "round";
+  for (const [dx, dy] of fg) {
+    g.strokeStyle = "rgba(150,200,255,0.5)"; g.lineWidth = 9;
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + dx * W * 0.5, cy + dy * H); g.stroke();
+    g.strokeStyle = "#ffffff"; g.lineWidth = 4;
+    g.beginPath(); g.moveTo(cx + dx * W * 0.18, cy + dy * H * 0.3); g.lineTo(cx + dx * W * 0.5, cy + dy * H); g.stroke();
+  }
+  g.fillStyle = "rgba(150,200,255,0.32)";
+  g.beginPath(); g.arc(cx, cy, W * 0.06, 0, 6.283); g.fill();
+},
   "51"(ctx, W, H, a) {                       // (vault) helios — boiling star, corona, prominence
     ctx.fillStyle = "#030204"; ctx.fillRect(0, 0, W, H);
     const cx = W * 0.5, cy = H * 0.52, R = Math.min(W, H) * 0.30;

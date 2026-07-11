@@ -28,18 +28,22 @@ export default class BubbleHands extends VisionPiece {
     this.drops = [];
     for (let i = 0; i < 240; i++) this.drops.push({ on: false, x: 0, y: 0, vx: 0, vy: 0, life: 0 });
     this.hands = [];          // per-hand state {x,y,px,py,acc,glow}
-    for (let i = 0; i < 4; i++) this.hands.push({ on: false, x: 0, y: 0, px: 0, py: 0, acc: 0, glow: 0 });
+    for (let i = 0; i < 4; i++) this.hands.push({ on: false, x: 0, y: 0, px: 0, py: 0, acc: 0, glow: 0, r: 46, pts: null, fist: false, fistT: 0 });
     this._ambAcc = 0;
   }
 
-  _spawn(x, y, vx, vy) {
+  _spawn(x, y, vx, vy, forceR) {
     const b = this.bubbles.find((q) => !q.on);
     if (!b) return;
     b.on = true;
     b.x = x + rand(-10, 10); b.y = y + rand(-10, 10);
     b.vx = vx * 0.35 + rand(-18, 18);
     b.vy = vy * 0.35 + rand(-26, -6);
-    b.r = rand(7, 26);
+    if (forceR) b.r = forceR * rand(0.85, 1.15);
+    else {
+      const u = Math.random();
+      b.r = u < 0.7 ? rand(5, 16) : u < 0.95 ? rand(16, 34) : rand(34, 58);
+    }
     b.ph = rand(0, TAU);
     b.hue = rand(0, 360);
     b.age = 0;
@@ -59,15 +63,32 @@ export default class BubbleHands extends VisionPiece {
     }
   }
 
+  // the WHOLE hand, not a fingertip: all 21 landmarks → screen points,
+  // palm centre, and a radius that wraps the entire hand
+  _digest(lms) {
+    const pts = lms.map((l) => this.toCanvas(l));
+    let cx = 0, cy = 0;
+    for (const i of [0, 5, 9, 13, 17]) { cx += pts[i].x; cy += pts[i].y; }
+    cx /= 5; cy /= 5;
+    let r = 0;
+    for (const p of pts) r = Math.max(r, Math.hypot(p.x - cx, p.y - cy));
+    r = Math.max(30, r);
+    // openness: how far the fingertips sit from the palm — a fist tucks them in
+    let open = 0;
+    for (const i of [8, 12, 16, 20]) open += Math.hypot(pts[i].x - cx, pts[i].y - cy);
+    open /= 4 * r;
+    return { pts, cx, cy, r, fist: open < 0.62 };
+  }
+
   visionFrame(dt, t, res) {
     const lms = (res && res.landmarks) || [];
     for (let i = 0; i < 4; i++) {
       const h = this.hands[i];
-      if (lms[i] && lms[i][HAND.INDEX]) {
-        const p = this.toCanvas(lms[i][HAND.INDEX]);
-        if (!h.on) { h.px = p.x; h.py = p.y; }
-        h.on = true; h.x = p.x; h.y = p.y;
-      } else h.on = false;
+      if (lms[i] && lms[i].length >= 21) {
+        const d = this._digest(lms[i]);
+        if (!h.on) { h.px = d.cx; h.py = d.cy; }
+        h.on = true; h.x = d.cx; h.y = d.cy; h.r = d.r; h.pts = d.pts; h.fist = d.fist;
+      } else { h.on = false; h.pts = null; }
     }
     this._scene(dt, t, true);
   }
@@ -76,7 +97,7 @@ export default class BubbleHands extends VisionPiece {
     const h = this.hands[0];
     if (this.pointer.active) {
       if (!h.on) { h.px = this.pointer.x; h.py = this.pointer.y; }
-      h.on = true; h.x = this.pointer.x; h.y = this.pointer.y;
+      h.on = true; h.x = this.pointer.x; h.y = this.pointer.y; h.r = 46; h.pts = null; h.fist = this.pointer.down;
     } else h.on = false;
     for (let i = 1; i < 4; i++) this.hands[i].on = false;
     this._scene(dt, t, false);
@@ -102,17 +123,36 @@ export default class BubbleHands extends VisionPiece {
       const hvx = (h.x - h.px) / Math.max(dt, 1e-3), hvy = (h.y - h.py) / Math.max(dt, 1e-3);
       const speed = Math.hypot(hvx, hvy);
 
-      // a steady stream wherever the hand goes
-      h.acc += dt * 14 * this.rate * (1 + Math.min(1.5, speed * 0.004));
-      while (h.acc >= 1) { h.acc -= 1; this._spawn(h.x, h.y, hvx, hvy); }
+      if (h.fist) {
+        // ✊ 주먹: 방울이 마구, 점점 크게 쏟아진다 — 오래 쥘수록 거대해짐
+        h.fistT = Math.min(4, h.fistT + dt);
+        h.acc += dt * (18 + h.fistT * 10) * this.rate;
+        const size = 12 + h.fistT * 22;                 // 12px → ~100px
+        while (h.acc >= 1) {
+          h.acc -= 1;
+          this._spawn(h.x + rand(-h.r, h.r) * 0.4, h.y + rand(-h.r, h.r) * 0.4,
+            hvx + rand(-40, 40), hvy - rand(20, 90), size);
+        }
+      } else {
+        h.fistT = Math.max(0, h.fistT - dt * 2);
+        // a steady stream from the WHOLE hand — every knuckle and fingertip blows
+        h.acc += dt * 16 * this.rate * (1 + Math.min(1.5, speed * 0.004));
+        while (h.acc >= 1) {
+          h.acc -= 1;
+          if (h.pts) {
+            const p = h.pts[(Math.random() * h.pts.length) | 0];
+            this._spawn(p.x, p.y, hvx, hvy);
+          } else this._spawn(h.x, h.y, hvx, hvy);
+        }
+      }
 
-      // fast swipe pops nearby bubbles; slow touch nudges them
+      // fast swipe pops bubbles anywhere on the hand; slow touch nudges them
       for (const b of this.bubbles) {
         if (!b.on || b.age < 0.35) continue;
         const dx = b.x - h.x, dy = b.y - h.y;
         const dd = Math.hypot(dx, dy);
-        if (dd < b.r + 30) {
-          if (speed > 520) this._pop(b);
+        if (dd < b.r + h.r) {
+          if (speed > 480) this._pop(b);
           else { b.vx += (dx / (dd + 1)) * 160 * dt * 8; b.vy += (dy / (dd + 1)) * 160 * dt * 8; }
         }
       }
@@ -169,16 +209,25 @@ export default class BubbleHands extends VisionPiece {
     }
     g.globalAlpha = 1;
 
-    // ---- hand halos: where the camera sees you ----------------------------------
+    // ---- 손 표시: 스켈레톤 없이, 다정한 빛 오라만 --------------------------------
     for (const h of this.hands) {
       if (h.glow < 0.02) continue;
-      const hg = g.createRadialGradient(h.x, h.y, 0, h.x, h.y, 46);
-      hg.addColorStop(0, `rgba(140,235,190,${0.22 * h.glow})`);
+      const charge = h.fistT / 4;
+      // soft aura wrapping the whole hand (grows warm while the fist charges)
+      const hg = g.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.r * 1.3);
+      hg.addColorStop(0, `rgba(${140 + charge * 90 | 0},${235 - charge * 60 | 0},${190 - charge * 60 | 0},${(0.20 + charge * 0.15) * h.glow})`);
       hg.addColorStop(1, "rgba(0,0,0,0)");
       g.fillStyle = hg;
-      g.beginPath(); g.arc(h.x, h.y, 46, 0, TAU); g.fill();
-      g.strokeStyle = `rgba(160,240,200,${0.5 * h.glow})`; g.lineWidth = 1.5;
-      g.beginPath(); g.arc(h.x, h.y, 14 + Math.sin(t * 4) * 2, 0, TAU); g.stroke();
+      g.beginPath(); g.arc(h.x, h.y, h.r * 1.3, 0, TAU); g.fill();
+      // a single breathing ring — "여기가 네 손이야"
+      g.strokeStyle = `rgba(200,255,228,${0.55 * h.glow})`;
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(h.x, h.y, h.r * (0.8 + Math.sin(t * 3) * 0.05) + charge * 10, 0, TAU); g.stroke();
+      if (charge > 0.05) {                               // 주먹 충전 표시: 차오르는 링
+        g.strokeStyle = `rgba(255,220,150,${0.7 * h.glow})`;
+        g.lineWidth = 3.5;
+        g.beginPath(); g.arc(h.x, h.y, h.r * 0.8 + charge * 10, -Math.PI / 2, -Math.PI / 2 + charge * TAU); g.stroke();
+      }
     }
 
     // caption
@@ -186,8 +235,8 @@ export default class BubbleHands extends VisionPiece {
     g.textAlign = "center"; g.textBaseline = "bottom";
     g.fillStyle = "rgba(215,222,240,0.6)";
     g.fillText(
-      viaCam ? "손을 들어 보세요 — 손끝마다 방울이 피어납니다 (최대 4손) · 빠르게 휘두르면 팡!"
-        : "카메라를 허용하면 손으로 놀 수 있어요 — 지금은 커서가 손입니다 · 빠르게 지나가면 팡!",
+      viaCam ? "손을 들면 방울이 피어나요 (최대 4손) · ✊ 주먹을 쥐면 점점 커다란 방울이! · 빠르게 휘두르면 팡!"
+        : "카메라를 허용하면 손으로 놀 수 있어요 — 지금은 커서가 손 · 꾹 누르면 점점 큰 방울 · 빠르게 지나가면 팡!",
       W / 2, H - 14);
 
     const vg = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.45, W / 2, H / 2, Math.max(W, H) * 0.78);
@@ -196,6 +245,6 @@ export default class BubbleHands extends VisionPiece {
   }
 
   controls(host) {
-    host.appendChild(slider("BUBBLES", 0.4, 2.5, this.rate, 0.05, (v) => (this.rate = v)));
+    host.appendChild(slider("BUBBLES", 0.2, 6, this.rate, 0.05, (v) => (this.rate = v)));
   }
 }
