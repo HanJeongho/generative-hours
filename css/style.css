@@ -469,3 +469,46 @@ body[data-view="room"] .gallery { display: none; }
   .brand__mark { animation: none; }
   html { scroll-behavior: auto; }
 }
+
+/* ===== Language layer (KO/EN) ============================================ */
+/* 좁은 화면에서 12관 내비가 우측 컨트롤(언어·사운드)을 밀어내지 않도록:
+   내비만 줄어들며 가로 스크롤, 브랜드/토글은 항상 보인다. */
+.topnav { flex: 1 1 auto; min-width: 0; overflow-x: auto; justify-content: center; scrollbar-width: none; }
+.topnav::-webkit-scrollbar { display: none; }
+.brand, .sound-toggle, .lang-toggle { flex: 0 0 auto; }
+
+.lang-toggle {
+  height: 38px; padding: 0 14px; margin-right: 10px; border-radius: 19px;
+  border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  transition: border-color 0.3s, color 0.3s, transform 0.3s;
+}
+.lang-toggle:hover { border-color: var(--accent); color: var(--ink); transform: scale(1.05); }
+
+.langchooser {
+  position: fixed; inset: 0; z-index: 300;
+  display: grid; place-items: center;
+  background: rgba(5, 6, 9, 0.86);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.langchooser__panel { text-align: center; padding: 24px; }
+.langchooser__brand {
+  font-family: var(--mono); font-size: 12px; letter-spacing: 0.34em;
+  color: var(--ink-dim); margin-bottom: 14px;
+}
+.langchooser__ask {
+  font-family: var(--serif); font-size: clamp(20px, 3vw, 28px); font-weight: 500;
+  margin-bottom: 30px;
+}
+.langchooser__btns { display: flex; gap: 16px; justify-content: center; }
+.langchooser__btns button {
+  min-width: 132px; padding: 13px 26px; border-radius: 999px;
+  border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 13px; letter-spacing: 0.14em;
+  color: var(--ink);
+  transition: border-color 0.25s, background 0.25s, transform 0.25s;
+}
+.langchooser__btns button:hover {
+  border-color: var(--accent); background: rgba(255, 255, 255, 0.04); transform: translateY(-1px);
+}

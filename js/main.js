@@ -8,6 +8,7 @@
 // the shell is reused by sister exhibitions: <html data-catalog="./data-errors.js">
 const { WINGS, WORKS, wingOf } = await import(document.documentElement.dataset.catalog || "./data.js");
 import { DETAILS } from "./details.js";
+import { isEN } from "./i18n.js"; // 임포트만으로 언어 토글·선택 오버레이·크롬 스왑이 초기화된다
 
 const body = document.body;
 const $ = (s, r = document) => r.querySelector(s);
@@ -1535,6 +1536,30 @@ if (!document.documentElement.dataset.catalog) {
     Object.assign(DETAILS, v.VAULT_DETAILS);
     Object.assign(thumbPainters, v.VAULT_THUMBS);
   } catch { /* vault stays home */ }
+}
+
+// EN 레이어 — 같은 이름의 .en.js 카탈로그 오버레이가 있으면 자막·해설·힌트를 교체한다.
+// (data.js → data.en.js, data-errors.js → data-errors.en.js …) 수장고처럼 없으면 조용히 원문 유지.
+if (isEN) {
+  try {
+    const path = (document.documentElement.dataset.catalog || "./data.js").replace(/\.js$/, ".en.js");
+    const en = await import(path);
+    for (const w of WORKS) {
+      const o = en.WORKS_EN?.[w.no];
+      if (!o) continue;
+      if (o.sub) w.ko = o.sub;
+      if (o.medium) w.medium = o.medium;
+      if (o.note) w.note = o.note;
+      if (o.hint) w.hint = o.hint;
+    }
+    for (const g of WINGS) {
+      const s = en.WINGS_EN?.[g.id];
+      if (s !== undefined) g.sub = s;
+    }
+    for (const [no, d] of Object.entries(en.DETAILS_EN || {})) {
+      if (DETAILS[no]) Object.assign(DETAILS[no], d);
+    }
+  } catch { /* overlay missing — stay Korean */ }
 }
 
 buildNav();

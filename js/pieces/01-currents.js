@@ -5,6 +5,7 @@
 // ============================================================================
 
 import { Piece, makeNoise, TAU } from "../engine.js";
+import { ctrlLabel } from "../i18n.js";
 
 // Press-and-hold vortex tuning. Holding longer charges a stronger, wider swirl,
 // but both saturate at full charge so it can never grow without bound.
@@ -177,7 +178,7 @@ export default class Currents extends Piece {
 export function slider(label, min, max, val, step, oninput, fmt = (v) => (+v).toFixed(2)) {
   const wrap = document.createElement("label");
   wrap.className = "ctrl";
-  wrap.innerHTML = `<span class="ctrl__label">${label}<span class="ctrl__val"></span></span>
+  wrap.innerHTML = `<span class="ctrl__label">${ctrlLabel(label)}<span class="ctrl__val"></span></span>
     <input type="range" min="${min}" max="${max}" step="${step}" value="${val}">`;
   const out = wrap.querySelector(".ctrl__val");
   const inp = wrap.querySelector("input");
@@ -192,7 +193,7 @@ export function buttonRow(btns) {
   row.className = "ctrl__btns";
   for (const b of btns) {
     const el = document.createElement("button");
-    el.className = "ctrl__btn"; el.textContent = b.label;
+    el.className = "ctrl__btn"; el.textContent = ctrlLabel(b.label);
     el.addEventListener("click", () => b.on(el));
     row.appendChild(el);
   }

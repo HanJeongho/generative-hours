@@ -5,6 +5,8 @@ An interactive generative-art exhibition running live in the browser — 46 work
 plus two sister shows: *Beautiful Errors*(착시 10작, `errors.html`) · *Little Hands*(아이들의 카메라 놀이터 12작, `kids.html`).
 
 Live: https://d3acb4zouf8s0e.cloudfront.net/ · https://hanjeongho.github.io/generative-hours/
+**한국어 / English** — 첫 방문 시 언어를 선택하고, 상단 KO·EN 토글로 언제든 전환할 수 있습니다.
+Pick your language on first visit, or switch anytime with the KO·EN toggle in the top bar (`?lang=en`).
 
 | | |
 |---|---|
